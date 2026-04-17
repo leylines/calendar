@@ -1,0 +1,79 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+  --color-gold: #d4af37;
+  --color-gold-light: #fffacd;
+  --color-gold-glow: rgba(212, 175, 55, 0.5);
+  --color-border-gold: rgba(212, 175, 55, 0.35);
+  --color-hover-gold: rgba(212, 175, 55, 0.08);
+  
+  --font-cinzel: "Cinzel", serif;
+  --font-raleway: "Raleway", sans-serif;
+}
+
+body {
+    background-color: #030303;
+    background-image: radial-gradient(circle at center, #0a0a0a 0%, #000 100%);
+    color: var(--color-gold);
+    font-family: var(--font-raleway);
+    min-height: 100vh;
+}
+
+.heading-mystic, h1, h2, h3, #currentPeriod, .day-number {
+    font-family: var(--font-cinzel);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+.day-cell {
+    @apply border min-h-[90px] md:min-h-[140px] p-1.5 md:p-3 cursor-pointer relative flex flex-col transition-all duration-300;
+    border-color: var(--color-border-gold);
+    background: rgba(20, 20, 20, 0.4);
+}
+
+.day-cell:hover {
+    border-color: var(--color-gold);
+    background: var(--color-hover-gold);
+    box-shadow: inset 0 0 15px rgba(212, 175, 55, 0.1);
+}
+
+.day-cell.special {
+    background: rgba(212, 175, 55, 0.05);
+    border-color: rgba(212, 175, 55, 0.6);
+}
+
+.day-cell.today {
+    border: 1px solid var(--color-gold);
+    box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.3), 0 0 10px rgba(212, 175, 55, 0.15);
+    background: rgba(212, 175, 55, 0.08);
+}
+
+.mystic-btn {
+    @apply btn btn-outline btn-sm md:btn-md font-raleway font-light rounded-sm;
+    color: var(--color-gold) !important;
+    border-color: var(--color-border-gold) !important;
+    background: transparent !important;
+    transition: all 0.3s ease;
+}
+
+.mystic-upload-label {
+    @apply cursor-pointer px-3 md:px-4 py-1.5 md:py-2 rounded-sm font-raleway font-light text-sm md:text-base transition-all duration-300 border;
+    color: var(--color-gold);
+    border-color: var(--color-border-gold);
+    background: transparent;
+}
+
+.mystic-upload-label:hover {
+    background: var(--color-hover-gold);
+    border-color: var(--color-gold);
+    box-shadow: 0 0 8px var(--color-gold-glow);
+}
+
+.event-marker {
+    @apply mt-1 px-1.5 py-0.5 rounded-sm text-[0.65rem] md:text-[0.7rem] whitespace-nowrap overflow-hidden text-ellipsis font-light;
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid var(--color-border-gold);
+    color: var(--color-gold);
+}
