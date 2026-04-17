@@ -1,0 +1,42 @@
+{
+  "icons": [
+    {
+      "src": "auto/icons/icon_512x512.26a5246791c9f8f783e2e5e01d86dcf2.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "auto/icons/icon_384x384.26a5246791c9f8f783e2e5e01d86dcf2.svg",
+      "sizes": "384x384",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "auto/icons/icon_256x256.26a5246791c9f8f783e2e5e01d86dcf2.svg",
+      "sizes": "256x256",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "auto/icons/icon_192x192.26a5246791c9f8f783e2e5e01d86dcf2.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "auto/icons/icon_128x128.26a5246791c9f8f783e2e5e01d86dcf2.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "auto/icons/icon_96x96.26a5246791c9f8f783e2e5e01d86dcf2.svg",
+      "sizes": "96x96",
+      "type": "image/svg+xml"
+    }
+  ],
+  "name": "13-Monate Mystik-Kalender",
+  "short_name": "13M Kalender",
+  "orientation": "portrait",
+  "display": "standalone",
+  "start_url": ".",
+  "description": "Ein mystischer 13-Monate-Kalender (28 Tage pro Monat), mit Mondphasen, Tierkreiszeichen, Elementen, Jahreskreisfesten und astronomischen Daten.",
+  "background_color": "#030303",
+  "theme_color": "#030303"
+}

@@ -10,11 +10,11 @@ module.exports = {
   entry: './src/script.js',
   output: {
     filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'docs'),
     clean: true,
   },
   devServer: {
-    static: './dist',
+    static: './docs',
     port: 8080,
     hot: true,
     open: true,
