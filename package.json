@@ -28,6 +28,7 @@
     "workbox-webpack-plugin": "^7.4.0"
   },
   "dependencies": {
+    "astronomy-engine": "^2.1.19",
     "date-holidays": "^3.27.0",
     "suncalc": "^1.9.0"
   }

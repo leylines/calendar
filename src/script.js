@@ -1,6 +1,7 @@
 import './styles.css';
 import SunCalc from 'suncalc';
 import Holidays from 'date-holidays';
+import { EclipticGeoMoon, SearchMoonNode, MakeTime } from 'astronomy-engine';
 
 // Initialize holidays for multiple countries, sorting DE first
 const HOLIDAY_COUNTRIES = ['DE', 'AT', 'CH', 'FR', 'US', 'GB'];
@@ -119,6 +120,37 @@ document.addEventListener('DOMContentLoaded', () => {
     prevBtn.addEventListener('click', () => changePeriod(-1));
     nextBtn.addEventListener('click', () => changePeriod(1));
     
+    // Swipe Gestures for Mobile
+    let touchstartX = 0;
+    let touchendX = 0;
+    let touchstartY = 0;
+    let touchendY = 0;
+    
+    calendarGrid.addEventListener('touchstart', e => {
+        touchstartX = e.changedTouches[0].screenX;
+        touchstartY = e.changedTouches[0].screenY;
+    }, {passive: true});
+
+    calendarGrid.addEventListener('touchend', e => {
+        touchendX = e.changedTouches[0].screenX;
+        touchendY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, {passive: true});
+
+    function handleSwipe() {
+        const xDiff = touchendX - touchstartX;
+        const yDiff = touchendY - touchstartY;
+        
+        // Only trigger horizontal swipe if horizontal movement is greater than vertical movement and > threshold
+        if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 50) {
+            if (xDiff < 0) {
+                changePeriod(1); // Swipe left -> Next
+            } else {
+                changePeriod(-1); // Swipe right -> Prev
+            }
+        }
+    }
+    
     const setView = (newView) => {
         if (newView === currentView) return;
 
@@ -185,6 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Error getting location:", error);
                 locationBtn.textContent = '❌ Fehler';
                 setTimeout(() => locationBtn.textContent = '📍 Standort', 3000);
+            }, {
+                enableHighAccuracy: false,
+                timeout: 10000,
+                maximumAge: 3600000
             });
         } else {
             alert("Geolocation wird von Deinem Browser nicht unterstützt.");
@@ -203,7 +239,7 @@ function getYearLength(year) {
 }
 
 function getGregorianDateFromIndex(year, index) {
-    const date = new Date(year, START_MONTH, START_DAY);
+    const date = new Date(year, START_MONTH, START_DAY, 12, 0, 0);
     date.setDate(date.getDate() + index);
     return date;
 }
@@ -234,19 +270,35 @@ function getAstroTimes(date) {
     const times = SunCalc.getTimes(date, userLat, userLng);
     const moonTimes = SunCalc.getMoonTimes(date, userLat, userLng);
     
-    // Obsigend / Nidsigend (Ascending / Descending Moon)
-    // Biodynamic calendars (like Maria Thun) use the Moon's declination.
-    // When the moon's declination is increasing, it is ascending (obsigend).
-    // When decreasing, it is descending (nidsigend).
-    // Altitude at latitude 90 (North Pole) is exactly equal to the celestial body's declination!
-    // We calculate noon UTC today vs noon UTC yesterday to find the trend.
+    // Obsigend / Nidsigend (Ascending / Descending Moon Path in tropical/sidereal agriculture)
+    // Based on crossing the Ecliptic (Moon Nodes).
+    // User requested specifically:
+    // When Moon Ecliptic Latitude is positive (> 0) -> Nidsigend
+    // When Moon Ecliptic Latitude is negative (< 0) -> Obsigend
     const utcNoonToday = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0));
-    const utcNoonYesterday = new Date(utcNoonToday.getTime() - 86400000);
-
-    const declinationToday = SunCalc.getMoonPosition(utcNoonToday, 90, 0).altitude;
-    const declinationYesterday = SunCalc.getMoonPosition(utcNoonYesterday, 90, 0).altitude;
+    const moonEcliptic = EclipticGeoMoon(utcNoonToday);
+    const isObsigend = moonEcliptic.lat < 0;
     
-    const isObsigend = declinationToday > declinationYesterday;
+    // Check for node transition today
+    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+    
+    const startOfAstroDay = MakeTime(startOfDay);
+    const nextNode = SearchMoonNode(startOfAstroDay);
+    
+    let transitionText = null;
+    let transitionTextShort = null;
+    
+    if (nextNode && nextNode.time.date >= startOfDay && nextNode.time.date <= endOfDay) {
+        const timeStr = nextNode.time.date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'});
+        if (nextNode.kind === 1) { // Ascending node (crosses to positive lat) -> Nidsigend
+            transitionText = `Wechsel nach Nidsigend um ${timeStr}`;
+            transitionTextShort = `➔ Nidsig. ${timeStr}`;
+        } else { // Descending node (crosses to negative lat) -> Obsigend
+            transitionText = `Wechsel nach Obsigend um ${timeStr}`;
+            transitionTextShort = `➔ Obsig. ${timeStr}`;
+        }
+    }
     
     const fmt = (d) => d && !isNaN(d.getTime()) ? d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--';
     
@@ -255,7 +307,9 @@ function getAstroTimes(date) {
         sunset: fmt(times.sunset),
         moonrise: fmt(moonTimes.rise),
         moonset: fmt(moonTimes.set),
-        obsigend: isObsigend
+        obsigend: isObsigend,
+        transitionText: transitionText,
+        transitionTextShort: transitionTextShort
     };
 }
 
@@ -330,18 +384,20 @@ function changePeriod(delta) {
 function renderCalendar() {
     calendarGrid.innerHTML = '';
     calendarGrid.className = 'grid gap-1 md:gap-2 transition-all'; // Reset class
-    weekdaysHeader.style.display = 'none';
+    weekdaysHeader.className = 'hidden'; // Default hidden
 
     const yearDays = getYearLength(currentYear);
     
     if (currentView === 'week') {
         renderWeekView(yearDays);
-        weekdaysHeader.style.display = 'grid';
+        weekdaysHeader.className = 'hidden md:grid grid-cols-7 gap-1 md:gap-2 text-center font-medium mb-4 border-b border-[rgba(212,175,55,0.15)] pb-2 heading-mystic text-xs md:text-sm text-[rgba(212,175,55,0.8)] uppercase transition-all';
     } else if (currentView === 'day') {
         renderDayView(yearDays);
     } else {
         renderMonthView(yearDays);
-        weekdaysHeader.style.display = currentPeriodIndex < MONTHS ? 'grid' : 'none';
+        if (currentPeriodIndex < MONTHS) {
+            weekdaysHeader.className = 'grid grid-cols-7 gap-1 md:gap-2 text-center font-medium mb-4 border-b border-[rgba(212,175,55,0.15)] pb-2 heading-mystic text-xs md:text-sm text-[rgba(212,175,55,0.8)] uppercase transition-all';
+        }
     }
 }
 
@@ -372,7 +428,6 @@ function renderWeekView(yearDays) {
     
     let startDayIndex = currentPeriodIndex * 7;
     calendarGrid.classList.add('grid-cols-1', 'md:grid-cols-7');
-    weekdaysHeader.style.display = 'grid';
     
     for (let i = 0; i < 7; i++) {
         const dayIndex = startDayIndex + i;
@@ -399,8 +454,9 @@ function renderDayView(yearDays) {
 
 function getAllHolidaysForDate(date) {
     let results = [];
+    const dateStr = formatGregorianDate(date); // Use string to prevent timezone offset bugs in date-holidays
     hdInstances.forEach(({ code, inst }) => {
-        const hols = inst.isHoliday(date);
+        const hols = inst.isHoliday(dateStr);
         if (hols && hols.length > 0) {
             hols.forEach(h => {
                 results.push({ country: code, name: h.name });
@@ -447,8 +503,10 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
         if (viewType === 'day') {
             const monthIndex = Math.floor(dayIndex / DAYS_PER_MONTH);
             numDiv.textContent = `${weekday}, Tag ${(dayIndex % DAYS_PER_MONTH) + 1} (Monat ${monthIndex + 1})`;
+        } else if (viewType === 'week') {
+            numDiv.innerHTML = `<span class="md:hidden text-lg mr-2">${weekday},</span>Tag ${(dayIndex % DAYS_PER_MONTH) + 1}`;
         } else {
-            numDiv.textContent = `Tag ${(dayIndex % DAYS_PER_MONTH) + 1}`;
+            numDiv.textContent = `${(dayIndex % DAYS_PER_MONTH) + 1}`;
         }
     }
     headerDiv.appendChild(numDiv);
@@ -485,10 +543,19 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
         const astroContainer = document.createElement('div');
         astroContainer.className = 'text-sm md:text-base font-light flex flex-col gap-1 mt-2 mb-2 p-3 border border-[rgba(212,175,55,0.2)] rounded-sm bg-[rgba(20,20,20,0.5)]';
         
+        let laufText = astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend';
+        if (astro.transitionText) {
+            if (viewType === 'week') {
+                laufText = `<span class="opacity-60">${astro.obsigend ? '📈 Obs.' : '📉 Nids.'}</span> ${astro.transitionTextShort}`;
+            } else {
+                laufText = `<span class="opacity-60">${astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend'}</span> <span class="block mt-1 text-sm">${astro.transitionText}</span>`;
+            }
+        }
+        
         astroContainer.innerHTML = `
             <div class="flex justify-between items-center"><strong class="opacity-100">Sonne:</strong> <span class="opacity-80">🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></div>
             <div class="flex justify-between items-center"><strong class="opacity-100">Mond:</strong> <span class="opacity-80">🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></div>
-            <div class="flex justify-between items-center"><strong class="opacity-100">Lauf:</strong> <span class="opacity-80 text-[var(--color-gold-light)]">${astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend'}</span></div>
+            <div class="flex justify-between items-center ${astro.transitionText && viewType === 'day' ? 'items-start' : ''}"><strong class="opacity-100">Lauf:</strong> <span class="opacity-80 text-[var(--color-gold-light)] text-right">${laufText}</span></div>
         `;
         
         // In week view, we might not want to take too much space, but day view is fine
@@ -605,10 +672,14 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
     
     const astro = getAstroTimes(gregorianDate);
     if (astro) {
+        let laufText = astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend';
+        if (astro.transitionText) {
+            laufText += ` <span class="block text-sm opacity-80 mt-1">${astro.transitionText}</span>`;
+        }
         detailsHTML += `<div class="mt-3 mb-3 p-3 border border-[rgba(212,175,55,0.2)] bg-[rgba(20,20,20,0.5)] rounded-sm space-y-1">
             <p class="flex justify-between"><strong>Sonne:</strong> <span>🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></p>
             <p class="flex justify-between"><strong>Mond:</strong> <span>🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></p>
-            <p class="flex justify-between"><strong>Lauf:</strong> <span class="text-[var(--color-gold-light)]">${astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend'}</span></p>
+            <p class="flex justify-between items-start"><strong>Lauf:</strong> <span class="text-[var(--color-gold-light)] text-right">${laufText}</span></p>
         </div>`;
     }
 
