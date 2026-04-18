@@ -74,10 +74,12 @@ let currentYear = new Date().getFullYear(); // Gregorian year of the 13-month ca
 let currentPeriodIndex = 0; // Month index (0-12) or Week index (0-51) or Day index (0-365)
 let currentView = 'month'; // 'month', 'week', 'day'
 let userEvents = {}; // Map 'YYYY-MM-DD' (Gregorian) to array of events
+let yearlyEvents = {}; // Map 'MM-DD' to array of events that repeat every year
 let userLat = null;
 let userLng = null;
 
 // DOM Elements
+const themeToggleBtn = document.getElementById('themeToggleBtn');
 const calendarGrid = document.getElementById('calendarGrid');
 const weekdaysHeader = document.getElementById('weekdays');
 const todayBtn = document.getElementById('todayBtn');
@@ -95,6 +97,17 @@ const modal = document.getElementById('modal');
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
     loadLocalCsv();
+    
+    // Theme initialization
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+    }
+    
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+    });
     
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
@@ -390,13 +403,13 @@ function renderCalendar() {
     
     if (currentView === 'week') {
         renderWeekView(yearDays);
-        weekdaysHeader.className = 'hidden md:grid grid-cols-7 gap-1 md:gap-2 text-center font-medium mb-4 border-b border-[rgba(212,175,55,0.15)] pb-2 heading-mystic text-xs md:text-sm text-[rgba(212,175,55,0.8)] uppercase transition-all';
+        weekdaysHeader.className = 'hidden md:grid grid-cols-7 gap-1 md:gap-2 text-center font-medium mb-4 border-b border-[var(--theme-border-gold)] pb-2 heading-mystic text-xs md:text-sm text-[color-mix(in_srgb,var(--theme-gold)_80%,transparent)] uppercase transition-all';
     } else if (currentView === 'day') {
         renderDayView(yearDays);
     } else {
         renderMonthView(yearDays);
         if (currentPeriodIndex < MONTHS) {
-            weekdaysHeader.className = 'grid grid-cols-7 gap-1 md:gap-2 text-center font-medium mb-4 border-b border-[rgba(212,175,55,0.15)] pb-2 heading-mystic text-xs md:text-sm text-[rgba(212,175,55,0.8)] uppercase transition-all';
+            weekdaysHeader.className = 'grid grid-cols-7 gap-1 md:gap-2 text-center font-medium mb-4 border-b border-[var(--theme-border-gold)] pb-2 heading-mystic text-xs md:text-sm text-[color-mix(in_srgb,var(--theme-gold)_80%,transparent)] uppercase transition-all';
         }
     }
 }
@@ -454,9 +467,12 @@ function renderDayView(yearDays) {
 
 function getAllHolidaysForDate(date) {
     let results = [];
-    const dateStr = formatGregorianDate(date); // Use string to prevent timezone offset bugs in date-holidays
+    // Important: create a new Date object at local NOON to prevent timezone boundary issues
+    // date-holidays parsing depends heavily on how the Date object overlaps with UTC day boundaries
+    const noonDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+    
     hdInstances.forEach(({ code, inst }) => {
-        const hols = inst.isHoliday(dateStr);
+        const hols = inst.isHoliday(noonDate);
         if (hols && hols.length > 0) {
             hols.forEach(h => {
                 results.push({ country: code, name: h.name });
@@ -541,7 +557,7 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     const astro = getAstroTimes(gregorianDate);
     if (astro && viewType !== 'month') {
         const astroContainer = document.createElement('div');
-        astroContainer.className = 'text-sm md:text-base font-light flex flex-col gap-1 mt-2 mb-2 p-3 border border-[rgba(212,175,55,0.2)] rounded-sm bg-[rgba(20,20,20,0.5)]';
+        astroContainer.className = 'text-sm md:text-base font-light flex flex-col gap-1 mt-2 mb-2 p-3 border border-[var(--theme-border-gold)] rounded-sm bg-[var(--theme-cell-bg)]';
         
         let laufText = astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend';
         if (astro.transitionText) {
@@ -560,7 +576,7 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
         
         // In week view, we might not want to take too much space, but day view is fine
         if (viewType === 'week') {
-            astroContainer.className = 'text-[0.65rem] md:text-[0.75rem] font-light flex flex-col gap-0.5 mt-1 mb-1 p-1 border border-[rgba(212,175,55,0.2)] rounded-sm bg-[rgba(20,20,20,0.5)]';
+            astroContainer.className = 'text-[0.65rem] md:text-[0.75rem] font-light flex flex-col gap-0.5 mt-1 mb-1 p-1 border border-[var(--theme-border-gold)] rounded-sm bg-[var(--theme-cell-bg)]';
         }
         
         infoContainer.appendChild(astroContainer);
@@ -600,7 +616,7 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
         const holidays = getAllHolidaysForDate(gregorianDate);
         if (holidays.length > 0) {
             const holContainer = document.createElement('div');
-            holContainer.className = viewType === 'day' ? 'mt-8 border-t border-[rgba(212,175,55,0.2)] pt-4' : 'mt-3 pt-2 border-t border-[rgba(212,175,55,0.2)]';
+            holContainer.className = viewType === 'day' ? 'mt-8 border-t border-[var(--theme-border-gold)] pt-4' : 'mt-3 pt-2 border-t border-[var(--theme-border-gold)]';
             
             const holTitle = document.createElement('h4');
             holTitle.className = 'text-xs md:text-sm font-bold uppercase tracking-wider mb-2 opacity-80';
@@ -613,7 +629,7 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
             holidays.forEach(h => {
                 const li = document.createElement('li');
                 li.className = 'text-[0.7rem] md:text-sm font-light flex items-center gap-2';
-                li.innerHTML = `<span class="opacity-50 border border-[rgba(212,175,55,0.3)] px-1 rounded text-[0.6rem]">${h.country}</span> <span>${h.name}</span>`;
+                li.innerHTML = `<span class="opacity-50 border border-[var(--theme-border-gold)] px-1 rounded text-[0.6rem]">${h.country}</span> <span>${h.name}</span>`;
                 holList.appendChild(li);
             });
             holContainer.appendChild(holList);
@@ -622,9 +638,10 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     }
 
     // Custom Events
-    if (userEvents[dateStr] && userEvents[dateStr].length > 0) {
+    const eventsToday = (userEvents[dateStr] || []).concat(yearlyEvents[mmdd] || []);
+    if (eventsToday.length > 0) {
         const evContainer = document.createElement('div');
-        evContainer.className = viewType === 'day' ? 'mt-8 border-t border-[rgba(212,175,55,0.2)] pt-4' : 'mt-auto pt-2';
+        evContainer.className = viewType === 'day' ? 'mt-8 border-t border-[var(--theme-border-gold)] pt-4' : 'mt-auto pt-2';
         
         if (viewType === 'day') {
             const evTitle = document.createElement('h4');
@@ -633,9 +650,9 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
             evContainer.appendChild(evTitle);
         }
 
-        userEvents[dateStr].forEach(evt => {
+        eventsToday.forEach(evt => {
             const evtDiv = document.createElement('div');
-            evtDiv.className = viewType === 'day' ? 'text-base mb-1 p-2 bg-[rgba(212,175,55,0.1)] border border-[rgba(212,175,55,0.3)] rounded' : 'event-marker';
+            evtDiv.className = viewType === 'day' ? 'text-base mb-1 p-2 bg-[color-mix(in_srgb,var(--theme-gold)_10%,transparent)] border border-[var(--theme-border-gold)] rounded' : 'event-marker';
             evtDiv.textContent = evt;
             evContainer.appendChild(evtDiv);
         });
@@ -676,7 +693,7 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
         if (astro.transitionText) {
             laufText += ` <span class="block text-sm opacity-80 mt-1">${astro.transitionText}</span>`;
         }
-        detailsHTML += `<div class="mt-3 mb-3 p-3 border border-[rgba(212,175,55,0.2)] bg-[rgba(20,20,20,0.5)] rounded-sm space-y-1">
+        detailsHTML += `<div class="mt-3 mb-3 p-3 border border-[var(--theme-border-gold)] bg-[var(--theme-cell-bg)] rounded-sm space-y-1">
             <p class="flex justify-between"><strong>Sonne:</strong> <span>🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></p>
             <p class="flex justify-between"><strong>Mond:</strong> <span>🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></p>
             <p class="flex justify-between items-start"><strong>Lauf:</strong> <span class="text-[var(--color-gold-light)] text-right">${laufText}</span></p>
@@ -691,7 +708,7 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
     const holidays = getAllHolidaysForDate(gregorianDate);
     if (holidays.length > 0) {
         holidays.forEach(h => {
-            detailsHTML += `<p><strong>Feiertag:</strong> <span class="opacity-50 border border-[rgba(212,175,55,0.3)] px-1 rounded text-[0.6rem] mr-1">${h.country}</span><span class="text-[var(--color-gold-light)]">${h.name}</span></p>`;
+            detailsHTML += `<p><strong>Feiertag:</strong> <span class="opacity-50 border border-[var(--theme-border-gold)] px-1 rounded text-[0.6rem] mr-1">${h.country}</span><span class="text-[var(--theme-gold-light)]">${h.name}</span></p>`;
         });
     }
 
@@ -699,8 +716,9 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
     
     const eventsUl = document.getElementById('modalEvents');
     eventsUl.innerHTML = '';
-    if (userEvents[dateStr]) {
-        userEvents[dateStr].forEach(evt => {
+    const eventsToday = (userEvents[dateStr] || []).concat(yearlyEvents[mmdd] || []);
+    if (eventsToday.length > 0) {
+        eventsToday.forEach(evt => {
             const li = document.createElement('li');
             li.textContent = evt;
             eventsUl.appendChild(li);
@@ -708,7 +726,7 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
     } else {
         const li = document.createElement('li');
         li.textContent = 'Keine Ereignisse.';
-        li.className = 'text-[rgba(212,175,55,0.5)] italic';
+        li.className = 'text-[color-mix(in_srgb,var(--theme-gold)_50%,transparent)] italic';
         eventsUl.appendChild(li);
     }
     
@@ -724,8 +742,14 @@ function parseCSV(text) {
             const d = date.trim();
             const evt = eventParts.join(',').trim();
             if (d && evt) {
-                if (!userEvents[d]) userEvents[d] = [];
-                userEvents[d].push(evt);
+                // If format is MM-DD, make it a yearly event
+                if (/^\d{2}-\d{2}$/.test(d)) {
+                    if (!yearlyEvents[d]) yearlyEvents[d] = [];
+                    yearlyEvents[d].push(evt);
+                } else {
+                    if (!userEvents[d]) userEvents[d] = [];
+                    userEvents[d].push(evt);
+                }
             }
         }
     });

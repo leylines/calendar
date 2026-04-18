@@ -2,78 +2,108 @@
 @plugin "daisyui";
 
 @theme {
-  --color-gold: #d4af37;
-  --color-gold-light: #fffacd;
-  --color-gold-glow: rgba(212, 175, 55, 0.5);
-  --color-border-gold: rgba(212, 175, 55, 0.35);
-  --color-hover-gold: rgba(212, 175, 55, 0.08);
+  --color-gold: var(--theme-gold);
+  --color-gold-light: var(--theme-gold-light);
+  --color-gold-glow: var(--theme-gold-glow);
+  --color-border-gold: var(--theme-border-gold);
+  --color-hover-gold: var(--theme-hover-gold);
   
   --font-cinzel: "Cinzel", serif;
   --font-raleway: "Raleway", sans-serif;
 }
 
+:root {
+  --theme-gold: #d4af37;
+  --theme-gold-light: #fffacd;
+  --theme-gold-glow: rgba(212, 175, 55, 0.5);
+  --theme-border-gold: rgba(212, 175, 55, 0.35);
+  --theme-hover-gold: rgba(212, 175, 55, 0.08);
+  --theme-bg-color: #030303;
+  --theme-bg-gradient: radial-gradient(circle at center, #0a0a0a 0%, #000 100%);
+  --theme-cell-bg: rgba(20, 20, 20, 0.4);
+  --theme-modal-bg: #0a0a0a;
+}
+
+body.light-mode {
+  --theme-gold: #4a0e4e; /* dark purple */
+  --theme-gold-light: #6a1b9a;
+  --theme-gold-glow: rgba(74, 14, 78, 0.3);
+  --theme-border-gold: rgba(74, 14, 78, 0.35);
+  --theme-hover-gold: rgba(74, 14, 78, 0.08);
+  --theme-bg-color: #fcfcfc;
+  --theme-bg-gradient: none;
+  --theme-cell-bg: rgba(250, 245, 255, 0.6);
+  --theme-modal-bg: #ffffff;
+}
+
 body {
-    background-color: #030303;
-    background-image: radial-gradient(circle at center, #0a0a0a 0%, #000 100%);
-    color: var(--color-gold);
+    background-color: var(--theme-bg-color);
+    background-image: var(--theme-bg-gradient);
+    color: var(--theme-gold);
     font-family: var(--font-raleway);
     min-height: 100vh;
+    transition: background-color 0.5s ease, color 0.5s ease;
 }
 
 .heading-mystic, h1, h2, h3, #currentPeriod, .day-number {
     font-family: var(--font-cinzel);
     font-weight: 600;
     letter-spacing: 1px;
-    text-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--theme-gold) 20%, transparent);
 }
 
 .day-cell {
     @apply border min-h-[90px] md:min-h-[140px] p-1.5 md:p-3 cursor-pointer relative flex flex-col transition-all duration-300;
-    border-color: var(--color-border-gold);
-    background: rgba(20, 20, 20, 0.4);
+    border-color: var(--theme-border-gold);
+    background: var(--theme-cell-bg);
 }
 
 .day-cell:hover {
-    border-color: var(--color-gold);
-    background: var(--color-hover-gold);
-    box-shadow: inset 0 0 15px rgba(212, 175, 55, 0.1);
+    border-color: var(--theme-gold);
+    background: var(--theme-hover-gold);
+    box-shadow: inset 0 0 15px color-mix(in srgb, var(--theme-gold) 10%, transparent);
 }
 
 .day-cell.special {
-    background: rgba(212, 175, 55, 0.05);
-    border-color: rgba(212, 175, 55, 0.6);
+    background: color-mix(in srgb, var(--theme-gold) 5%, transparent);
+    border-color: color-mix(in srgb, var(--theme-gold) 60%, transparent);
 }
 
 .day-cell.today {
-    border: 1px solid var(--color-gold);
-    box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.3), 0 0 10px rgba(212, 175, 55, 0.15);
-    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid var(--theme-gold);
+    box-shadow: inset 0 0 20px color-mix(in srgb, var(--theme-gold) 30%, transparent), 0 0 10px color-mix(in srgb, var(--theme-gold) 15%, transparent);
+    background: color-mix(in srgb, var(--theme-gold) 8%, transparent);
 }
 
 .mystic-btn {
     @apply btn btn-outline btn-sm md:btn-md font-raleway font-light rounded-sm;
-    color: var(--color-gold) !important;
-    border-color: var(--color-border-gold) !important;
+    color: var(--theme-gold) !important;
+    border-color: var(--theme-border-gold) !important;
     background: transparent !important;
     transition: all 0.3s ease;
 }
 
+.mystic-btn:hover {
+    background: var(--theme-hover-gold) !important;
+    border-color: var(--theme-gold) !important;
+}
+
 .mystic-upload-label {
     @apply cursor-pointer px-3 md:px-4 py-1.5 md:py-2 rounded-sm font-raleway font-light text-sm md:text-base transition-all duration-300 border;
-    color: var(--color-gold);
-    border-color: var(--color-border-gold);
+    color: var(--theme-gold);
+    border-color: var(--theme-border-gold);
     background: transparent;
 }
 
 .mystic-upload-label:hover {
-    background: var(--color-hover-gold);
-    border-color: var(--color-gold);
-    box-shadow: 0 0 8px var(--color-gold-glow);
+    background: var(--theme-hover-gold);
+    border-color: var(--theme-gold);
+    box-shadow: 0 0 8px var(--theme-gold-glow);
 }
 
 .event-marker {
     @apply mt-1 px-1.5 py-0.5 rounded-sm text-[0.65rem] md:text-[0.7rem] whitespace-nowrap overflow-hidden text-ellipsis font-light;
-    background: rgba(212, 175, 55, 0.15);
-    border: 1px solid var(--color-border-gold);
-    color: var(--color-gold);
+    background: color-mix(in srgb, var(--theme-gold) 15%, transparent);
+    border: 1px solid var(--theme-border-gold);
+    color: var(--theme-gold);
 }
