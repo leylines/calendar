@@ -1,7 +1,7 @@
 import './styles.css';
 import SunCalc from 'suncalc';
 import Holidays from 'date-holidays';
-import { EclipticGeoMoon, SearchMoonNode, MakeTime } from 'astronomy-engine';
+import { EclipticGeoMoon, SearchMoonNode, MakeTime, SearchMoonQuarter, Seasons } from 'astronomy-engine';
 
 // Initialize holidays for multiple countries, sorting DE first
 const HOLIDAY_COUNTRIES = ['DE', 'AT', 'CH', 'FR', 'US', 'GB'];
@@ -58,16 +58,50 @@ const TRADITIONAL_ZODIACS = [
 ];
 
 // Jahreskreis-Feste (Sabbats / Cardinals)
+// The Equinoxes and Solstices are now dynamically calculated via getExactSeasonTime
 const YEAR_WHEEL = {
-    '03-21': 'Ostara (Frühlingstagundnachtgleiche)',
     '05-01': 'Beltane',
-    '06-21': 'Litha (Sommersonnenwende)',
     '08-01': 'Lughnasadh (Lammas)',
-    '09-23': 'Mabon (Herbsttagundnachtgleiche)',
     '11-01': 'Samhain',
-    '12-21': 'Yul (Wintersonnenwende)',
     '02-01': 'Imbolc'
 };
+
+const SEASONS_CACHE = {};
+
+function getExactSeasonTime(date) {
+    const year = date.getFullYear();
+    if (!SEASONS_CACHE[year]) {
+        SEASONS_CACHE[year] = Seasons(year);
+    }
+    const s = SEASONS_CACHE[year];
+    const check = (astroTime, name) => {
+        if (astroTime.date.getFullYear() === date.getFullYear() &&
+            astroTime.date.getMonth() === date.getMonth() &&
+            astroTime.date.getDate() === date.getDate()) {
+            return { name, time: astroTime.date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'}) };
+        }
+        return null;
+    };
+    return check(s.mar_equinox, 'Ostara (Frühlingstagundnachtgleiche)') ||
+           check(s.jun_solstice, 'Litha (Sommersonnenwende)') ||
+           check(s.sep_equinox, 'Mabon (Herbsttagundnachtgleiche)') ||
+           check(s.dec_solstice, 'Yul (Wintersonnenwende)');
+}
+
+function getExactMoonPhaseTime(date) {
+    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 0, 0, 0);
+    const mq = SearchMoonQuarter(MakeTime(startOfDay));
+    if (mq.time.date >= startOfDay && mq.time.date < endOfDay) {
+        let name = '';
+        if (mq.quarter === 0) name = '🌑 Neumond';
+        if (mq.quarter === 1) name = '🌓 Zun. Halbmond';
+        if (mq.quarter === 2) name = '🌕 Vollmond';
+        if (mq.quarter === 3) name = '🌗 Abn. Halbmond';
+        return { name, time: mq.time.date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'}), quarter: mq.quarter };
+    }
+    return null;
+}
 
 // State
 let currentYear = new Date().getFullYear(); // Gregorian year of the 13-month calendar start
@@ -224,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 userLat = position.coords.latitude;
                 userLng = position.coords.longitude;
                 locationBtn.textContent = '📍 Aktiv';
-                locationBtn.classList.add('text-[var(--color-gold)]', 'border-[var(--color-gold)]');
+                locationBtn.classList.add('text-[var(--theme-gold)]', 'border-[var(--theme-gold)]');
                 renderCalendar();
             }, (error) => {
                 console.error("Error getting location:", error);
@@ -460,7 +494,7 @@ function renderWeekView(yearDays) {
 function renderDayView(yearDays) {
     currentPeriodLabel.textContent = `Tag ${currentPeriodIndex + 1} (${currentYear}-${currentYear + 1})`;
     
-    calendarGrid.classList.add('grid-cols-1');
+    calendarGrid.classList.add('grid-cols-1', 'md:max-w-2xl', 'md:mx-auto', 'w-full');
     const isSpecial = currentPeriodIndex >= (MONTHS * DAYS_PER_MONTH);
     calendarGrid.appendChild(createDayCell(currentPeriodIndex, isSpecial, 'day'));
 }
@@ -511,7 +545,7 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     headerDiv.className = 'flex justify-between items-start mb-2';
     
     const numDiv = document.createElement('div');
-    numDiv.className = viewType === 'month' ? 'text-lg md:text-2xl heading-mystic' : 'text-2xl md:text-4xl heading-mystic text-[var(--color-gold-light)]';
+    numDiv.className = viewType === 'month' ? 'text-lg md:text-2xl heading-mystic text-[var(--theme-gold)]' : 'text-2xl md:text-4xl heading-mystic text-[var(--theme-gold-light)]';
     if (isSpecialDay) {
         const festtagNum = dayIndex - (MONTHS * DAYS_PER_MONTH) + 1;
         numDiv.textContent = `Festtag ${festtagNum}`;
@@ -547,7 +581,9 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     infoContainer.className = viewType === 'day' ? 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-6' : 'flex flex-col gap-1 mt-1';
     
     // Moon
-    const moonStr = getMoonPhase(gregorianDate);
+    const exactMoon = getExactMoonPhaseTime(gregorianDate);
+    const moonStr = exactMoon ? `${exactMoon.name} <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : getMoonPhase(gregorianDate);
+    
     const moonDiv = document.createElement('div');
     moonDiv.className = viewType === 'month' ? 'text-[0.65rem] md:text-xs opacity-75 font-light' : 'text-sm md:text-base font-light';
     moonDiv.innerHTML = viewType === 'month' ? moonStr : `<strong class="opacity-100">Mondphase:</strong> ${moonStr}`;
@@ -603,9 +639,19 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
         const specName = YEAR_WHEEL[mmdd];
         const specDiv = document.createElement('div');
         specDiv.className = viewType === 'month' 
-            ? 'text-[0.65rem] md:text-xs mt-1 font-medium text-[var(--color-gold)] drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]'
-            : 'text-sm md:text-base font-medium text-[var(--color-gold-light)] drop-shadow-[0_0_8px_rgba(255,215,0,0.5)] mt-2 md:mt-0';
-        specDiv.innerHTML = viewType === 'month' ? specName : `<strong class="opacity-100 text-[var(--color-gold)]">Jahreskreisfest:</strong> ${specName}`;
+            ? 'text-[0.65rem] md:text-xs mt-1 font-medium text-[var(--theme-gold)] drop-shadow-[0_0_5px_var(--theme-gold-glow)]'
+            : 'text-sm md:text-base font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-2 md:mt-0';
+        specDiv.innerHTML = viewType === 'month' ? specName : `<strong class="opacity-100 text-[var(--theme-gold)]">Jahreskreisfest:</strong> ${specName}`;
+        infoContainer.appendChild(specDiv);
+    }
+    
+    const exactSeason = getExactSeasonTime(gregorianDate);
+    if (exactSeason) {
+        const specDiv = document.createElement('div');
+        specDiv.className = viewType === 'month' 
+            ? 'text-[0.65rem] md:text-xs mt-1 font-medium text-[var(--theme-gold)] drop-shadow-[0_0_5px_var(--theme-gold-glow)]'
+            : 'text-sm md:text-base font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-2 md:mt-0';
+        specDiv.innerHTML = viewType === 'month' ? `${exactSeason.name} <span class="opacity-60 text-[0.55rem] block">${exactSeason.time}</span>` : `<strong class="opacity-100 text-[var(--theme-gold)]">Wende/TagNacht:</strong> ${exactSeason.name} <span class="opacity-60 text-xs">um ${exactSeason.time}</span>`;
         infoContainer.appendChild(specDiv);
     }
 
@@ -681,7 +727,9 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
     const gregOptions = { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' };
     document.getElementById('modalGregorian').textContent = `Gregorianisch: ${gregorianDate.toLocaleDateString('de-DE', gregOptions)} (${dateStr})`;
     
-    let detailsHTML = `<p><strong>Mondphase:</strong> ${getMoonPhase(gregorianDate)}</p>`;
+    const exactMoon = getExactMoonPhaseTime(gregorianDate);
+    let detailsHTML = `<p><strong>Mondphase:</strong> ${exactMoon ? `${exactMoon.name} <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : getMoonPhase(gregorianDate)}</p>`;
+    
     const z13 = getZodiac(gregorianDate);
     const z12 = getTraditionalZodiac(gregorianDate);
     detailsHTML += `<p><strong>Sternzeichen (13):</strong> ${z13.icon} ${z13.name} <span class="ml-2 text-xs opacity-70">(${z13.element.icon} ${z13.element.name})</span></p>`;
@@ -702,6 +750,11 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
 
     if (YEAR_WHEEL[mmdd]) {
         detailsHTML += `<p><strong>Jahreskreisfest:</strong> ${YEAR_WHEEL[mmdd]}</p>`;
+    }
+    
+    const exactSeason = getExactSeasonTime(gregorianDate);
+    if (exactSeason) {
+        detailsHTML += `<p><strong class="text-[var(--theme-gold)]">Wende/TagNacht:</strong> ${exactSeason.name} <span class="opacity-60 text-xs">um ${exactSeason.time}</span></p>`;
     }
     
     // Check for public/religious holidays using date-holidays library

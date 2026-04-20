@@ -1,10 +1,10 @@
 module.exports = {
-    title: "13-Monate Mystik-Kalender",
-    description: "Ein mystischer 13-Monate-Kalender (28 Tage pro Monat), mit Mondphasen, Tierkreiszeichen, Elementen, Jahreskreisfesten und astronomischen Daten.",
-    url: "https://deinedomain.de",
+    title: "13-Monate Kalender",
+    description: "Ein 13-Monate-Kalender (28 Tage pro Monat), mit Mondphasen, Tierkreiszeichen, Elementen, Jahreskreisfesten und astronomischen Daten.",
+    url: "https://calendar.leylines.net",
     themeColor: "#030303",
-    image: "https://deinedomain.de/icon.png",
-    author: "Dein Name",
+    image: "https://calendar.leylines.net/favicon.png",
+    author: "Joerg Roth",
     schema: {
         "@context": "https://schema.org",
         "@type": "WebApplication",
