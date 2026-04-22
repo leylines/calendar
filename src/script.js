@@ -904,7 +904,8 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
     document.getElementById('modalGregorian').textContent = `Gregorianisch: ${gregorianDate.toLocaleDateString('de-DE', gregOptions)} (${dateStr})`;
     
     const exactMoon = getExactMoonPhaseTime(gregorianDate);
-    let detailsHTML = `<p><strong>Mondphase:</strong> ${exactMoon ? `${exactMoon.name} <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : getMoonPhase(gregorianDate)}</p>`;
+    const phaseData = exactMoon || getMoonPhase(gregorianDate);
+    let detailsHTML = `<p><strong>Mondphase:</strong> ${phaseData.icon} ${phaseData.name}${exactMoon ? ` <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : ''}</p>`;
     
     const z13 = getZodiac(gregorianDate);
     const z12 = getTraditionalZodiac(gregorianDate);
