@@ -65,14 +65,20 @@ body {
 }
 
 .day-cell.special {
-    background: color-mix(in srgb, var(--theme-gold) 5%, transparent);
+    background: color-mix(in srgb, var(--theme-gold) 12%, var(--theme-cell-bg));
     border-color: color-mix(in srgb, var(--theme-gold) 60%, transparent);
 }
 
 .day-cell.today {
-    border: 1px solid var(--theme-gold);
+    border: 1px solid var(--theme-gold) !important;
     box-shadow: inset 0 0 20px color-mix(in srgb, var(--theme-gold) 30%, transparent), 0 0 10px color-mix(in srgb, var(--theme-gold) 15%, transparent);
-    background: color-mix(in srgb, var(--theme-gold) 8%, transparent);
+    background: color-mix(in srgb, var(--theme-gold) 18%, var(--theme-cell-bg));
+}
+
+.day-cell.has-events {
+    background: color-mix(in srgb, var(--theme-gold) 8%, var(--theme-cell-bg));
+    border-color: color-mix(in srgb, var(--theme-gold) 45%, transparent);
+    box-shadow: inset 0 0 15px color-mix(in srgb, var(--theme-gold) 12%, transparent);
 }
 
 .mystic-btn {

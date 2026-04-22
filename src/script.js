@@ -2,6 +2,7 @@ import './styles.css';
 import SunCalc from 'suncalc';
 import Holidays from 'date-holidays';
 import { EclipticGeoMoon, SearchMoonNode, MakeTime, SearchMoonQuarter, Seasons } from 'astronomy-engine';
+import { LongCount } from '@drewsonne/maya-dates/lib/index.js';
 
 // Initialize holidays for multiple countries, sorting DE first
 const HOLIDAY_COUNTRIES = ['DE', 'AT', 'CH', 'FR', 'US', 'GB'];
@@ -11,8 +12,12 @@ const hdInstances = HOLIDAY_COUNTRIES.map(code => ({ code, inst: new Holidays(co
 const MONTHS = 13;
 const DAYS_PER_MONTH = 28;
 const START_MONTH = 2; // March (0-indexed)
-const START_DAY = 21; // March 21st
+let START_DAY = parseInt(localStorage.getItem('yearStart')) || 21; // March 20st or 21st
+let WEEK_START = parseInt(localStorage.getItem('weekStart') || '1'); // 1 = Monday, 0 = Sunday
 const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+if (WEEK_START === 0) {
+    WEEKDAYS.unshift(WEEKDAYS.pop()); // Shift Sunday to front
+}
 
 const ELEMENTS = {
     'Feuer': { name: 'Feuer', icon: '🔥' },
@@ -68,6 +73,16 @@ const YEAR_WHEEL = {
 
 const SEASONS_CACHE = {};
 
+function getMayaDate(date) {
+    const noonDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+    const lc = LongCount.fromGregorian(noonDate);
+    const fd = lc.buildFullDate();
+    return {
+        longCount: lc.toString().replace(/\s+/g, ''),
+        calendarRound: fd.cr.toString()
+    };
+}
+
 function getExactSeasonTime(date) {
     const year = date.getFullYear();
     if (!SEASONS_CACHE[year]) {
@@ -94,11 +109,12 @@ function getExactMoonPhaseTime(date) {
     const mq = SearchMoonQuarter(MakeTime(startOfDay));
     if (mq.time.date >= startOfDay && mq.time.date < endOfDay) {
         let name = '';
-        if (mq.quarter === 0) name = '🌑 Neumond';
-        if (mq.quarter === 1) name = '🌓 Zun. Halbmond';
-        if (mq.quarter === 2) name = '🌕 Vollmond';
-        if (mq.quarter === 3) name = '🌗 Abn. Halbmond';
-        return { name, time: mq.time.date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'}), quarter: mq.quarter };
+        let icon = '';
+        if (mq.quarter === 0) { icon = '🌑'; name = 'Neumond'; }
+        if (mq.quarter === 1) { icon = '🌓'; name = 'Zunehmender Halbmond'; }
+        if (mq.quarter === 2) { icon = '🌕'; name = 'Vollmond'; }
+        if (mq.quarter === 3) { icon = '🌗'; name = 'Abnehmender Halbmond'; }
+        return { icon, name, time: mq.time.date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'}), quarter: mq.quarter };
     }
     return null;
 }
@@ -113,7 +129,6 @@ let userLat = null;
 let userLng = null;
 
 // DOM Elements
-const themeToggleBtn = document.getElementById('themeToggleBtn');
 const calendarGrid = document.getElementById('calendarGrid');
 const weekdaysHeader = document.getElementById('weekdays');
 const todayBtn = document.getElementById('todayBtn');
@@ -125,7 +140,6 @@ const optMonth = document.getElementById('optMonth');
 const optWeek = document.getElementById('optWeek');
 const optDay = document.getElementById('optDay');
 const csvUpload = document.getElementById('csvUpload');
-const locationBtn = document.getElementById('locationBtn');
 const modal = document.getElementById('modal');
 
 // Initialization
@@ -138,9 +152,146 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('light-mode');
     }
     
-    themeToggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('light-mode');
-        localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+    // Theme setup from Settings Modal
+    const themeRadios = document.querySelectorAll('input[name="theme"]');
+    themeRadios.forEach(radio => {
+        if (radio.value === savedTheme) {
+            radio.checked = true;
+        }
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'light') {
+                document.body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.body.classList.remove('light-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+    });
+
+    // Year Start setup
+    const yearStartRadios = document.querySelectorAll('input[name="yearStart"]');
+    yearStartRadios.forEach(radio => {
+        if (parseInt(radio.value) === START_DAY) radio.checked = true;
+        radio.addEventListener('change', (e) => {
+            START_DAY = parseInt(e.target.value);
+            localStorage.setItem('yearStart', START_DAY);
+            initCalendar();
+        });
+    });
+
+    // Week Start setup
+    const weekStartRadios = document.querySelectorAll('input[name="weekStart"]');
+    weekStartRadios.forEach(radio => {
+        if (parseInt(radio.value) === WEEK_START) radio.checked = true;
+        radio.addEventListener('change', (e) => {
+            const newWeekStart = parseInt(e.target.value);
+            if (newWeekStart !== WEEK_START) {
+                // Reconstruct weekdays array completely to avoid shifting multiple times
+                const defaultWeekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+                WEEKDAYS.length = 0; // Clear
+                if (newWeekStart === 0) {
+                    WEEKDAYS.push('Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag');
+                } else {
+                    WEEKDAYS.push(...defaultWeekdays);
+                }
+                WEEK_START = newWeekStart;
+                localStorage.setItem('weekStart', WEEK_START);
+                renderCalendar();
+            }
+        });
+    });
+
+    // Location search setup
+    const locationInput = document.getElementById('locationInput');
+    const searchLocationBtn = document.getElementById('searchLocationBtn');
+    const gpsLocationBtn = document.getElementById('gpsLocationBtn');
+    const resetLocationBtn = document.getElementById('resetLocationBtn');
+    const currentLocationText = document.getElementById('currentLocationText');
+
+    const updateLocationText = (lat, lng, name) => {
+        userLat = lat;
+        userLng = lng;
+        localStorage.setItem('userLat', lat);
+        localStorage.setItem('userLng', lng);
+        if (name) localStorage.setItem('userLocName', name);
+        else localStorage.removeItem('userLocName');
+        
+        currentLocationText.textContent = name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        currentLocationText.classList.remove('opacity-70', 'italic');
+        resetLocationBtn.classList.remove('hidden');
+        renderCalendar();
+    };
+
+    resetLocationBtn.addEventListener('click', () => {
+        userLat = null;
+        userLng = null;
+        localStorage.removeItem('userLat');
+        localStorage.removeItem('userLng');
+        localStorage.removeItem('userLocName');
+        
+        currentLocationText.textContent = 'Kein Standort gewählt';
+        currentLocationText.classList.add('opacity-70', 'italic');
+        resetLocationBtn.classList.add('hidden');
+        renderCalendar();
+    });
+
+    // Load saved location
+    if (localStorage.getItem('userLat') && localStorage.getItem('userLng')) {
+        updateLocationText(
+            parseFloat(localStorage.getItem('userLat')), 
+            parseFloat(localStorage.getItem('userLng')), 
+            localStorage.getItem('userLocName') || 'Gespeicherter Ort'
+        );
+    } else {
+        resetLocationBtn.classList.add('hidden');
+    }
+
+    searchLocationBtn.addEventListener('click', async () => {
+        const query = locationInput.value.trim();
+        if (!query) return;
+        
+        searchLocationBtn.textContent = '⏳';
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            
+            if (data && data.length > 0) {
+                const result = data[0];
+                const nameParts = result.display_name.split(',');
+                const name = nameParts.length > 1 ? `${nameParts[0]}, ${nameParts[nameParts.length - 1]}` : nameParts[0]; // Try to get City, Country
+                updateLocationText(parseFloat(result.lat), parseFloat(result.lon), name);
+                locationInput.value = '';
+                locationInput.placeholder = name;
+            } else {
+                alert('Ort nicht gefunden.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Fehler bei der Ortssuche.');
+        } finally {
+            searchLocationBtn.textContent = 'Suchen';
+        }
+    });
+
+    gpsLocationBtn.addEventListener('click', () => {
+        if ("geolocation" in navigator) {
+            gpsLocationBtn.textContent = '⏳ ...';
+            navigator.geolocation.getCurrentPosition((position) => {
+                updateLocationText(position.coords.latitude, position.coords.longitude, '📍 GPS Standort');
+                gpsLocationBtn.innerHTML = '<span>📍 GPS verwenden</span>';
+            }, (error) => {
+                console.error("Error getting location:", error);
+                alert("GPS Fehler oder blockiert.");
+                gpsLocationBtn.innerHTML = '<span>📍 GPS verwenden</span>';
+            }, {
+                enableHighAccuracy: false,
+                timeout: 10000,
+                maximumAge: 3600000
+            });
+        } else {
+            alert("Geolocation wird von Deinem Browser nicht unterstützt.");
+        }
     });
     
     // Register Service Worker for PWA
@@ -250,29 +401,6 @@ document.addEventListener('DOMContentLoaded', () => {
     optDay.addEventListener('click', () => setView('day'));
     
     csvUpload.addEventListener('change', handleCsvUpload);
-    
-    locationBtn.addEventListener('click', () => {
-        if ("geolocation" in navigator) {
-            locationBtn.textContent = '⏳ ...';
-            navigator.geolocation.getCurrentPosition((position) => {
-                userLat = position.coords.latitude;
-                userLng = position.coords.longitude;
-                locationBtn.textContent = '📍 Aktiv';
-                locationBtn.classList.add('text-[var(--theme-gold)]', 'border-[var(--theme-gold)]');
-                renderCalendar();
-            }, (error) => {
-                console.error("Error getting location:", error);
-                locationBtn.textContent = '❌ Fehler';
-                setTimeout(() => locationBtn.textContent = '📍 Standort', 3000);
-            }, {
-                enableHighAccuracy: false,
-                timeout: 10000,
-                maximumAge: 3600000
-            });
-        } else {
-            alert("Geolocation wird von Deinem Browser nicht unterstützt.");
-        }
-    });
 });
 
 function isLeapYear(year) {
@@ -301,14 +429,14 @@ function getMoonPhase(date) {
     const phase = moonIllumination.phase; // 0 to 1
     
     // Convert to 8 phases
-    if (phase < 0.03 || phase > 0.97) return '🌑 Neumond';
-    if (phase < 0.22) return '🌒 Zun. Sichel';
-    if (phase < 0.28) return '🌓 Erstes Viertel';
-    if (phase < 0.47) return '🌔 Zun. Mond';
-    if (phase < 0.53) return '🌕 Vollmond';
-    if (phase < 0.72) return '🌖 Abn. Mond';
-    if (phase < 0.78) return '🌗 Letztes Viertel';
-    return '🌘 Abn. Sichel';
+    if (phase < 0.03 || phase > 0.97) return { icon: '🌑', name: 'Neumond' };
+    if (phase < 0.22) return { icon: '🌒', name: 'Zunehmende Sichel' };
+    if (phase < 0.28) return { icon: '🌓', name: 'Erstes Viertel' };
+    if (phase < 0.47) return { icon: '🌔', name: 'Zunehmender Mond' };
+    if (phase < 0.53) return { icon: '🌕', name: 'Vollmond' };
+    if (phase < 0.72) return { icon: '🌖', name: 'Abnehmender Mond' };
+    if (phase < 0.78) return { icon: '🌗', name: 'Letztes Viertel' };
+    return { icon: '🌘', name: 'Abnehmende Sichel' };
 }
 
 function getAstroTimes(date) {
@@ -432,6 +560,13 @@ function renderCalendar() {
     calendarGrid.innerHTML = '';
     calendarGrid.className = 'grid gap-1 md:gap-2 transition-all'; // Reset class
     weekdaysHeader.className = 'hidden'; // Default hidden
+    
+    // Update weekdays header content dynamically based on current WEEKDAYS array
+    weekdaysHeader.innerHTML = '';
+    WEEKDAYS.forEach(day => {
+        const shortDay = day.substring(0, 2);
+        weekdaysHeader.innerHTML += `<div class="hidden md:block">${day}</div><div class="md:hidden">${shortDay}</div>`;
+    });
 
     const yearDays = getYearLength(currentYear);
     
@@ -494,7 +629,7 @@ function renderWeekView(yearDays) {
 function renderDayView(yearDays) {
     currentPeriodLabel.textContent = `Tag ${currentPeriodIndex + 1} (${currentYear}-${currentYear + 1})`;
     
-    calendarGrid.classList.add('grid-cols-1', 'md:max-w-2xl', 'md:mx-auto', 'w-full');
+    calendarGrid.classList.add('grid-cols-1', 'md:w-2/3', 'lg:w-1/2', 'mx-auto', 'w-full');
     const isSpecial = currentPeriodIndex >= (MONTHS * DAYS_PER_MONTH);
     calendarGrid.appendChild(createDayCell(currentPeriodIndex, isSpecial, 'day'));
 }
@@ -537,12 +672,12 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     cell.className = `day-cell ${isSpecialDay ? 'special' : ''} ${isToday ? 'today' : ''}`;
     
     if (viewType === 'day') {
-        cell.className += ' p-6 md:p-10 min-h-[60vh]';
+        cell.className += ' p-6 md:p-10'; // removed min-h-[60vh] to fix scrollbar issue
     }
 
     // Header Content
     const headerDiv = document.createElement('div');
-    headerDiv.className = 'flex justify-between items-start mb-2';
+    headerDiv.className = 'flex flex-col md:flex-row justify-between items-start mb-2';
     
     const numDiv = document.createElement('div');
     numDiv.className = viewType === 'month' ? 'text-lg md:text-2xl heading-mystic text-[var(--theme-gold)]' : 'text-2xl md:text-4xl heading-mystic text-[var(--theme-gold-light)]';
@@ -554,7 +689,7 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
             const monthIndex = Math.floor(dayIndex / DAYS_PER_MONTH);
             numDiv.textContent = `${weekday}, Tag ${(dayIndex % DAYS_PER_MONTH) + 1} (Monat ${monthIndex + 1})`;
         } else if (viewType === 'week') {
-            numDiv.innerHTML = `<span class="md:hidden text-lg mr-2">${weekday},</span>Tag ${(dayIndex % DAYS_PER_MONTH) + 1}`;
+            numDiv.innerHTML = `<span class="md:hidden text-lg mr-2">${weekday}, </span>${(dayIndex % DAYS_PER_MONTH) + 1}`; // Removed 'Tag'
         } else {
             numDiv.textContent = `${(dayIndex % DAYS_PER_MONTH) + 1}`;
         }
@@ -563,13 +698,13 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
 
     if (viewType !== 'month') {
         const gregDiv = document.createElement('div');
-        gregDiv.className = 'text-xs md:text-sm italic opacity-60 text-right';
+        gregDiv.className = 'text-xs md:text-sm italic opacity-60 text-left md:text-right mt-0.5 md:mt-0';
         const gregOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
         gregDiv.textContent = gregorianDate.toLocaleDateString('de-DE', gregOptions);
         headerDiv.appendChild(gregDiv);
     } else {
         const gregDiv = document.createElement('div');
-        gregDiv.className = 'text-[0.6rem] md:text-xs italic opacity-60 text-right mt-0.5 md:mt-1';
+        gregDiv.className = 'text-[0.6rem] md:text-xs italic opacity-60 text-left md:text-right mt-0.5 md:mt-1';
         gregDiv.textContent = `${String(gregorianDate.getDate()).padStart(2, '0')}.${String(gregorianDate.getMonth() + 1).padStart(2, '0')}.`;
         headerDiv.appendChild(gregDiv);
     }
@@ -578,42 +713,41 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
 
     // Common Info Container
     const infoContainer = document.createElement('div');
-    infoContainer.className = viewType === 'day' ? 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-6' : 'flex flex-col gap-1 mt-1';
+    infoContainer.className = viewType === 'day' ? 'flex flex-col gap-3 mt-6' : 'flex flex-col gap-1 mt-1';
     
     // Moon
     const exactMoon = getExactMoonPhaseTime(gregorianDate);
-    const moonStr = exactMoon ? `${exactMoon.name} <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : getMoonPhase(gregorianDate);
+    const phaseData = exactMoon || getMoonPhase(gregorianDate);
     
     const moonDiv = document.createElement('div');
-    moonDiv.className = viewType === 'month' ? 'text-[0.65rem] md:text-xs opacity-75 font-light' : 'text-sm md:text-base font-light';
-    moonDiv.innerHTML = viewType === 'month' ? moonStr : `<strong class="opacity-100">Mondphase:</strong> ${moonStr}`;
+    if (viewType === 'month') {
+        moonDiv.className = 'text-[0.65rem] md:text-xs opacity-75 font-light';
+        moonDiv.innerHTML = `${phaseData.icon} <span class="hidden md:inline">${phaseData.name}${exactMoon ? ` <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : ''}</span>`;
+    } else if (viewType === 'week') {
+        moonDiv.className = 'text-xs md:text-sm font-light';
+        moonDiv.innerHTML = `<strong class="opacity-100">Mondphase: </strong>${phaseData.icon} <span>${phaseData.name}</span>${exactMoon ? ` <span class="opacity-60 text-[0.65rem] md:text-xs">um ${exactMoon.time}</span>` : ''}`;
+    } else {
+        moonDiv.className = 'text-sm md:text-base font-light';
+        moonDiv.innerHTML = `<strong class="opacity-100">Mondphase: </strong>${phaseData.icon} <span>${phaseData.name}</span>${exactMoon ? ` <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : ''}`;
+    }
     infoContainer.appendChild(moonDiv);
 
     // Astro Data (Sun & Moon times + Obsigend/Nidsigend) if location is available
     const astro = getAstroTimes(gregorianDate);
-    if (astro && viewType !== 'month') {
+    if (astro && viewType === 'day') {
         const astroContainer = document.createElement('div');
         astroContainer.className = 'text-sm md:text-base font-light flex flex-col gap-1 mt-2 mb-2 p-3 border border-[var(--theme-border-gold)] rounded-sm bg-[var(--theme-cell-bg)]';
         
         let laufText = astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend';
         if (astro.transitionText) {
-            if (viewType === 'week') {
-                laufText = `<span class="opacity-60">${astro.obsigend ? '📈 Obs.' : '📉 Nids.'}</span> ${astro.transitionTextShort}`;
-            } else {
-                laufText = `<span class="opacity-60">${astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend'}</span> <span class="block mt-1 text-sm">${astro.transitionText}</span>`;
-            }
+            laufText = `<span class="opacity-60">${astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend'}</span> <span class="block mt-1 text-sm">${astro.transitionText}</span>`;
         }
         
         astroContainer.innerHTML = `
             <div class="flex justify-between items-center"><strong class="opacity-100">Sonne:</strong> <span class="opacity-80">🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></div>
             <div class="flex justify-between items-center"><strong class="opacity-100">Mond:</strong> <span class="opacity-80">🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></div>
-            <div class="flex justify-between items-center ${astro.transitionText && viewType === 'day' ? 'items-start' : ''}"><strong class="opacity-100">Lauf:</strong> <span class="opacity-80 text-[var(--color-gold-light)] text-right">${laufText}</span></div>
+            <div class="flex justify-between items-center ${astro.transitionText && viewType === 'day' ? 'items-start' : ''}"><strong class="opacity-100">Lauf:</strong> <span class="opacity-80 text-[var(--theme-gold-light)] text-right">${laufText}</span></div>
         `;
-        
-        // In week view, we might not want to take too much space, but day view is fine
-        if (viewType === 'week') {
-            astroContainer.className = 'text-[0.65rem] md:text-[0.75rem] font-light flex flex-col gap-0.5 mt-1 mb-1 p-1 border border-[var(--theme-border-gold)] rounded-sm bg-[var(--theme-cell-bg)]';
-        }
         
         infoContainer.appendChild(astroContainer);
     }
@@ -623,35 +757,65 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     const z12 = getTraditionalZodiac(gregorianDate);
     
     const z13Div = document.createElement('div');
-    z13Div.className = viewType === 'month' ? 'text-[0.65rem] md:text-xs opacity-75 font-light' : 'text-sm md:text-base font-light';
-    z13Div.innerHTML = viewType === 'month' ? `${z13.icon} ${z13.name}` : `<strong class="opacity-100">Sternzeichen (13):</strong> ${z13.icon} ${z13.name} <span class="ml-2 text-xs opacity-70">(${z13.element.icon} ${z13.element.name})</span>`;
+    if (viewType === 'month') {
+        z13Div.className = 'text-[0.65rem] md:text-xs opacity-75 font-light';
+        z13Div.innerHTML = `${z13.icon} <span class="hidden md:inline">${z13.name}</span>`;
+    } else if (viewType === 'week') {
+        z13Div.className = 'text-xs md:text-sm font-light';
+        z13Div.innerHTML = `<strong class="opacity-100">Sternzeichen (13): </strong>${z13.icon} <span>${z13.name}</span> <span class="ml-1 text-[0.65rem] md:text-[0.7rem] opacity-70">(${z13.element.icon} ${z13.element.name})</span>`;
+    } else {
+        z13Div.className = 'text-sm md:text-base font-light';
+        z13Div.innerHTML = `<strong class="opacity-100">Sternzeichen (13): </strong>${z13.icon} <span>${z13.name}</span> <span class="ml-2 text-xs opacity-70">(${z13.element.icon} ${z13.element.name})</span>`;
+    }
     infoContainer.appendChild(z13Div);
 
-    if (viewType !== 'month') {
+    if (viewType === 'day') {
         const z12Div = document.createElement('div');
         z12Div.className = 'text-sm md:text-base font-light';
         z12Div.innerHTML = `<strong class="opacity-100">Sternzeichen (12):</strong> ${z12.icon} ${z12.name} <span class="ml-2 text-xs opacity-70">(${z12.element.icon} ${z12.element.name})</span>`;
         infoContainer.appendChild(z12Div);
+        
+        const maya = getMayaDate(gregorianDate);
+        const mayaDiv = document.createElement('div');
+        mayaDiv.className = 'text-sm md:text-base font-light mt-1';
+        mayaDiv.innerHTML = `<strong class="opacity-100">Maya Kalender:</strong> ${maya.calendarRound} <span class="ml-2 text-xs opacity-70">(LC: ${maya.longCount})</span>`;
+        infoContainer.appendChild(mayaDiv);
     }
+
+    let hasEventsOrSpecial = false;
 
     // Special Days (Cardinals / Wheel)
     if (YEAR_WHEEL[mmdd]) {
+        hasEventsOrSpecial = true;
         const specName = YEAR_WHEEL[mmdd];
         const specDiv = document.createElement('div');
-        specDiv.className = viewType === 'month' 
-            ? 'text-[0.65rem] md:text-xs mt-1 font-medium text-[var(--theme-gold)] drop-shadow-[0_0_5px_var(--theme-gold-glow)]'
-            : 'text-sm md:text-base font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-2 md:mt-0';
-        specDiv.innerHTML = viewType === 'month' ? specName : `<strong class="opacity-100 text-[var(--theme-gold)]">Jahreskreisfest:</strong> ${specName}`;
+        if (viewType === 'month') {
+            specDiv.className = 'hidden md:block text-[0.65rem] md:text-xs mt-1 font-medium text-[var(--theme-gold)] drop-shadow-[0_0_5px_var(--theme-gold-glow)]';
+            specDiv.innerHTML = specName;
+        } else if (viewType === 'week') {
+            specDiv.className = 'text-xs md:text-sm font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-1';
+            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">Jahreskreisfest:</strong> ${specName}`;
+        } else {
+            specDiv.className = 'text-sm md:text-base font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-2 md:mt-0';
+            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">Jahreskreisfest:</strong> ${specName}`;
+        }
         infoContainer.appendChild(specDiv);
     }
     
     const exactSeason = getExactSeasonTime(gregorianDate);
     if (exactSeason) {
+        hasEventsOrSpecial = true;
         const specDiv = document.createElement('div');
-        specDiv.className = viewType === 'month' 
-            ? 'text-[0.65rem] md:text-xs mt-1 font-medium text-[var(--theme-gold)] drop-shadow-[0_0_5px_var(--theme-gold-glow)]'
-            : 'text-sm md:text-base font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-2 md:mt-0';
-        specDiv.innerHTML = viewType === 'month' ? `${exactSeason.name} <span class="opacity-60 text-[0.55rem] block">${exactSeason.time}</span>` : `<strong class="opacity-100 text-[var(--theme-gold)]">Wende/TagNacht:</strong> ${exactSeason.name} <span class="opacity-60 text-xs">um ${exactSeason.time}</span>`;
+        if (viewType === 'month') {
+            specDiv.className = 'hidden md:block text-[0.65rem] md:text-xs mt-1 font-medium text-[var(--theme-gold)] drop-shadow-[0_0_5px_var(--theme-gold-glow)]';
+            specDiv.innerHTML = `${exactSeason.name} <span class="opacity-60 text-[0.55rem] block">${exactSeason.time}</span>`;
+        } else if (viewType === 'week') {
+            specDiv.className = 'text-xs md:text-sm font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-1';
+            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">Wende/TagNacht:</strong> ${exactSeason.name} <span class="opacity-60 text-[0.65rem] md:text-xs">um ${exactSeason.time}</span>`;
+        } else {
+            specDiv.className = 'text-sm md:text-base font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-2 md:mt-0';
+            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">Wende/TagNacht:</strong> ${exactSeason.name} <span class="opacity-60 text-xs">um ${exactSeason.time}</span>`;
+        }
         infoContainer.appendChild(specDiv);
     }
 
@@ -661,11 +825,12 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     if (viewType !== 'month') {
         const holidays = getAllHolidaysForDate(gregorianDate);
         if (holidays.length > 0) {
+            hasEventsOrSpecial = true;
             const holContainer = document.createElement('div');
-            holContainer.className = viewType === 'day' ? 'mt-8 border-t border-[var(--theme-border-gold)] pt-4' : 'mt-3 pt-2 border-t border-[var(--theme-border-gold)]';
+            holContainer.className = viewType === 'day' ? 'mt-8 border-t border-[var(--theme-border-gold)] pt-4' : 'mt-2 pt-1 border-t border-[var(--theme-border-gold)]';
             
             const holTitle = document.createElement('h4');
-            holTitle.className = 'text-xs md:text-sm font-bold uppercase tracking-wider mb-2 opacity-80';
+            holTitle.className = viewType === 'day' ? 'text-sm font-bold uppercase tracking-wider mb-2 opacity-80' : 'text-[0.65rem] md:text-[0.7rem] font-bold uppercase tracking-wider mb-1 opacity-80';
             holTitle.textContent = 'Feiertage';
             holContainer.appendChild(holTitle);
 
@@ -674,7 +839,7 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
             
             holidays.forEach(h => {
                 const li = document.createElement('li');
-                li.className = 'text-[0.7rem] md:text-sm font-light flex items-center gap-2';
+                li.className = viewType === 'day' ? 'text-sm font-light flex items-center gap-2' : 'text-[0.7rem] md:text-xs font-light flex items-center gap-1.5';
                 li.innerHTML = `<span class="opacity-50 border border-[var(--theme-border-gold)] px-1 rounded text-[0.6rem]">${h.country}</span> <span>${h.name}</span>`;
                 holList.appendChild(li);
             });
@@ -686,23 +851,34 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     // Custom Events
     const eventsToday = (userEvents[dateStr] || []).concat(yearlyEvents[mmdd] || []);
     if (eventsToday.length > 0) {
+        hasEventsOrSpecial = true;
         const evContainer = document.createElement('div');
         evContainer.className = viewType === 'day' ? 'mt-8 border-t border-[var(--theme-border-gold)] pt-4' : 'mt-auto pt-2';
         
-        if (viewType === 'day') {
+        if (viewType === 'day' || viewType === 'week') {
             const evTitle = document.createElement('h4');
-            evTitle.className = 'text-sm font-bold uppercase tracking-wider mb-2 opacity-80';
+            evTitle.className = viewType === 'day' ? 'text-sm font-bold uppercase tracking-wider mb-2 opacity-80' : 'text-[0.65rem] md:text-[0.7rem] font-bold uppercase tracking-wider mb-1 opacity-80';
             evTitle.textContent = 'Eigene Ereignisse';
             evContainer.appendChild(evTitle);
         }
 
         eventsToday.forEach(evt => {
             const evtDiv = document.createElement('div');
-            evtDiv.className = viewType === 'day' ? 'text-base mb-1 p-2 bg-[color-mix(in_srgb,var(--theme-gold)_10%,transparent)] border border-[var(--theme-border-gold)] rounded' : 'event-marker';
+            if (viewType === 'day') {
+                evtDiv.className = 'text-base mb-1 p-2 bg-[color-mix(in_srgb,var(--theme-gold)_10%,transparent)] border border-[var(--theme-border-gold)] rounded';
+            } else if (viewType === 'week') {
+                evtDiv.className = 'text-[0.7rem] md:text-xs mb-0.5 p-1 bg-[color-mix(in_srgb,var(--theme-gold)_10%,transparent)] border border-[var(--theme-border-gold)] rounded-sm font-light';
+            } else {
+                evtDiv.className = 'event-marker hidden md:block';
+            }
             evtDiv.textContent = evt;
             evContainer.appendChild(evtDiv);
         });
         cell.appendChild(evContainer);
+    }
+    
+    if (hasEventsOrSpecial) {
+        cell.classList.add('has-events');
     }
     
     // Click event for modal (only in month/week view)
@@ -732,8 +908,10 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
     
     const z13 = getZodiac(gregorianDate);
     const z12 = getTraditionalZodiac(gregorianDate);
+    const maya = getMayaDate(gregorianDate);
     detailsHTML += `<p><strong>Sternzeichen (13):</strong> ${z13.icon} ${z13.name} <span class="ml-2 text-xs opacity-70">(${z13.element.icon} ${z13.element.name})</span></p>`;
     detailsHTML += `<p><strong>Sternzeichen (12):</strong> ${z12.icon} ${z12.name} <span class="ml-2 text-xs opacity-70">(${z12.element.icon} ${z12.element.name})</span></p>`;
+    detailsHTML += `<p><strong>Maya Kalender:</strong> ${maya.calendarRound} <span class="ml-2 text-xs opacity-70">(LC: ${maya.longCount})</span></p>`;
     
     const astro = getAstroTimes(gregorianDate);
     if (astro) {
@@ -744,7 +922,7 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
         detailsHTML += `<div class="mt-3 mb-3 p-3 border border-[var(--theme-border-gold)] bg-[var(--theme-cell-bg)] rounded-sm space-y-1">
             <p class="flex justify-between"><strong>Sonne:</strong> <span>🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></p>
             <p class="flex justify-between"><strong>Mond:</strong> <span>🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></p>
-            <p class="flex justify-between items-start"><strong>Lauf:</strong> <span class="text-[var(--color-gold-light)] text-right">${laufText}</span></p>
+            <p class="flex justify-between items-start"><strong>Lauf:</strong> <span class="text-[var(--theme-gold-light)] text-right">${laufText}</span></p>
         </div>`;
     }
 
