@@ -1,0 +1,67 @@
+{
+  "icons": [
+    {
+      "src": "icons/icon_512x512.ee4083829b4fdacb44f7c37a08cf6a5f.ico",
+      "sizes": "512x512",
+      "type": "image/vnd.microsoft.icon"
+    },
+    {
+      "src": "icons/icon_384x384.ee4083829b4fdacb44f7c37a08cf6a5f.ico",
+      "sizes": "384x384",
+      "type": "image/vnd.microsoft.icon"
+    },
+    {
+      "src": "icons/icon_256x256.ee4083829b4fdacb44f7c37a08cf6a5f.ico",
+      "sizes": "256x256",
+      "type": "image/vnd.microsoft.icon"
+    },
+    {
+      "src": "icons/icon_192x192.ee4083829b4fdacb44f7c37a08cf6a5f.ico",
+      "sizes": "192x192",
+      "type": "image/vnd.microsoft.icon"
+    },
+    {
+      "src": "icons/icon_128x128.ee4083829b4fdacb44f7c37a08cf6a5f.ico",
+      "sizes": "128x128",
+      "type": "image/vnd.microsoft.icon"
+    },
+    {
+      "src": "icons/icon_96x96.ee4083829b4fdacb44f7c37a08cf6a5f.ico",
+      "sizes": "96x96",
+      "type": "image/vnd.microsoft.icon"
+    }
+  ],
+  "name": "13-Monate Kalender",
+  "short_name": "13M Kalender",
+  "orientation": "portrait",
+  "display": "standalone",
+  "start_url": ".",
+  "description": "Ein 13-Monate-Kalender (28 Tage pro Monat), mit Mondphasen, Tierkreiszeichen, Elementen, Jahreskreisfesten und astronomischen Daten.",
+  "background_color": "#030303",
+  "theme_color": "#030303",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+calendar",
+      "url": "/?date=%s"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/Users/joroth/Development/leylines.net/calendar/gemini/public/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop-Ansicht des 13-Monate Kalenders"
+    },
+    {
+      "src": "/Users/joroth/Development/leylines.net/calendar/gemini/public/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "label": "Mobile-Ansicht des 13-Monate Kalenders"
+    }
+  ]
+}

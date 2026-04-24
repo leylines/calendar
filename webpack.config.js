@@ -58,18 +58,41 @@ module.exports = {
       background_color: seoConfig.themeColor,
       theme_color: seoConfig.themeColor,
       crossorigin: 'use-credentials', // can be null, use-credentials or anonymous
+      display_override: ['window-controls-overlay', 'standalone'],
+      protocol_handlers: [
+        {
+          protocol: 'web+calendar',
+          url: '/?date=%s'
+        }
+      ],
       icons: [
         {
-          src: path.resolve('public/leylines-sign.png'),
+          src: path.resolve('public/favicon.ico'),
           sizes: [96, 128, 192, 256, 384, 512],
           destination: path.join('icons')
+        }
+      ],
+      screenshots: [
+        {
+          src: path.resolve('public/screenshot-desktop.png'),
+          sizes: '1280x720',
+          type: 'image/png',
+          form_factor: 'wide',
+          label: 'Desktop-Ansicht des 13-Monate Kalenders'
+        },
+        {
+          src: path.resolve('public/screenshot-mobile.png'),
+          sizes: '750x1334',
+          type: 'image/png',
+          label: 'Mobile-Ansicht des 13-Monate Kalenders'
         }
       ]
     }),
     new GenerateSW({
       clientsClaim: true,
       skipWaiting: true,
-      maximumFileSizeToCacheInBytes: 5000000 // To handle large deps locally
+      maximumFileSizeToCacheInBytes: 5000000, // To handle large deps locally
+      exclude: [/\.DS_Store$/, /^CNAME$/]
     })
   ],
 };
