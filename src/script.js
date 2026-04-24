@@ -253,7 +253,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         searchLocationBtn.textContent = '⏳';
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            // Provide email parameter as requested by Nominatim Usage Policy to prevent blocking
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&email=hello@leylines.net`, {
+                headers: {
+                    'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8'
+                }
+            });
+            
+            if (!res.ok) {
+                throw new Error(`Nominatim API Error: ${res.status} ${res.statusText}`);
+            }
+
             const data = await res.json();
             
             if (data && data.length > 0) {
@@ -264,11 +274,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 locationInput.value = '';
                 locationInput.placeholder = name;
             } else {
-                alert('Ort nicht gefunden.');
+                alert('Ort nicht gefunden. Bitte versuche einen genaueren Namen.');
             }
         } catch (e) {
-            console.error(e);
-            alert('Fehler bei der Ortssuche.');
+            console.error("Location search error:", e);
+            alert(`Fehler bei der Ortssuche: ${e.message}`);
         } finally {
             searchLocationBtn.textContent = 'Suchen';
         }
