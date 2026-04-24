@@ -253,21 +253,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         searchLocationBtn.textContent = '⏳';
         try {
-            // Provide email parameter as requested by Nominatim Usage Policy to prevent blocking
-            // Removed custom headers to prevent CORS preflight "Failed to fetch" errors on mobile
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&email=hello@leylines.net&accept-language=de`);
+            // Switched from Nominatim to Open-Meteo Geocoding API.
+            // Open-Meteo is much more permissive with frontend CORS/Mobile tracking protection compared to Nominatim.
+            const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=de&format=json`);
             
             if (!res.ok) {
-                throw new Error(`Nominatim API Error: ${res.status} ${res.statusText}`);
+                throw new Error(`API Error: ${res.status} ${res.statusText}`);
             }
 
             const data = await res.json();
             
-            if (data && data.length > 0) {
-                const result = data[0];
-                const nameParts = result.display_name.split(',');
-                const name = nameParts.length > 1 ? `${nameParts[0]}, ${nameParts[nameParts.length - 1]}` : nameParts[0]; // Try to get City, Country
-                updateLocationText(parseFloat(result.lat), parseFloat(result.lon), name);
+            if (data && data.results && data.results.length > 0) {
+                const result = data.results[0];
+                const name = result.country ? `${result.name}, ${result.country}` : result.name;
+                updateLocationText(parseFloat(result.latitude), parseFloat(result.longitude), name);
                 locationInput.value = '';
                 locationInput.placeholder = name;
             } else {
