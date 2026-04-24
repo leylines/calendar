@@ -44,7 +44,10 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: './src/index.html',
-      templateParameters: { seo: seoConfig },
+      templateParameters: { 
+        seo: seoConfig,
+        buildTime: new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich' })
+      },
     }),
     new CopyWebpackPlugin({
       patterns: [

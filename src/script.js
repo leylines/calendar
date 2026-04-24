@@ -254,11 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
         searchLocationBtn.textContent = '⏳';
         try {
             // Provide email parameter as requested by Nominatim Usage Policy to prevent blocking
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&email=hello@leylines.net`, {
-                headers: {
-                    'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8'
-                }
-            });
+            // Removed custom headers to prevent CORS preflight "Failed to fetch" errors on mobile
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&email=hello@leylines.net&accept-language=de`);
             
             if (!res.ok) {
                 throw new Error(`Nominatim API Error: ${res.status} ${res.statusText}`);
