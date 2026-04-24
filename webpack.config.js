@@ -74,14 +74,14 @@ module.exports = {
       ],
       screenshots: [
         {
-          src: path.resolve('screenshot-desktop.png'),
+          src: path.resolve('/screenshot-desktop.png'),
           sizes: '2520x1514',
           type: 'image/png',
           form_factor: 'wide',
           label: 'Desktop-Ansicht des 13-Monate Kalenders'
         },
         {
-          src: path.resolve('screenshot-mobile.png'),
+          src: path.resolve('/screenshot-mobile.png'),
           sizes: '1500x1832',
           type: 'image/png',
           label: 'Mobile-Ansicht des 13-Monate Kalenders'
