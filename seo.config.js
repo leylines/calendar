@@ -3,7 +3,7 @@ module.exports = {
     description: "Ein 13-Monate-Kalender (28 Tage pro Monat), mit Mondphasen, Tierkreiszeichen, Elementen, Jahreskreisfesten und astronomischen Daten.",
     url: "https://calendar.leylines.net",
     themeColor: "#030303",
-    image: "https://calendar.leylines.net/favicon.png",
+    image: "https://calendar.leylines.net/leylines-sign.png",
     author: "Joerg Roth",
     schema: {
         "@context": "https://schema.org",

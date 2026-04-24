@@ -60,7 +60,7 @@ module.exports = {
       crossorigin: 'use-credentials', // can be null, use-credentials or anonymous
       icons: [
         {
-          src: path.resolve('public/favicon.ico'),
+          src: path.resolve('public/leylines-sign.png'),
           sizes: [96, 128, 192, 256, 384, 512],
           destination: path.join('icons')
         }

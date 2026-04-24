@@ -1,0 +1,42 @@
+{
+  "icons": [
+    {
+      "src": "icons/icon_512x512.641d6f11c708ec44dca406e5b87f9ca6.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon_384x384.3e10a4dc96c59a03e08450ee55a0c478.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon_256x256.76e21efc4b2158241cb3a69d86dbbe2e.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon_192x192.defec1d30e66eb9f5c9b045dd6058563.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon_128x128.cca19bab497a1e7fabf0ccfe2cbb3e23.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon_96x96.f78e0d9bfa4c36a8fa38f3a2a61929b6.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    }
+  ],
+  "name": "13-Monate Kalender",
+  "short_name": "13M Kalender",
+  "orientation": "portrait",
+  "display": "standalone",
+  "start_url": ".",
+  "description": "Ein 13-Monate-Kalender (28 Tage pro Monat), mit Mondphasen, Tierkreiszeichen, Elementen, Jahreskreisfesten und astronomischen Daten.",
+  "background_color": "#030303",
+  "theme_color": "#030303"
+}
