@@ -30,25 +30,25 @@
 <body>
     <div class="container mx-auto px-4 md:px-8 py-4 md:py-8 max-w-7xl">
         <header class="flex flex-col md:flex-row justify-between items-center border-b border-[var(--theme-border-gold)] pb-4 mb-8">
-            <h1 class="text-3xl md:text-4xl text-center md:text-left mb-4 md:mb-0 heading-mystic flex items-center gap-2">
+            <h1 class="text-3xl md:text-4xl text-center md:text-left mb-4 md:mb-0 heading-mystic flex items-center gap-2" data-i18n="appTitle">
                 13-Monate Kalender
             </h1>
             <div class="controls flex flex-wrap justify-center gap-2 md:gap-4 w-full md:w-auto">
-                <button id="todayBtn" class="mystic-btn">Heute</button>
+                <button id="todayBtn" class="mystic-btn" data-i18n="todayBtn">Heute</button>
                 <button id="prevBtn" class="mystic-btn px-4">&lt;</button>
                 <span id="currentPeriod" class="text-xl md:text-2xl min-w-[150px] md:min-w-[200px] text-center w-full md:w-auto order-first md:order-none mb-2 md:mb-0">Monat 1</span>
                 <button id="nextBtn" class="mystic-btn px-4">&gt;</button>
                 <div class="dropdown dropdown-end">
-                    <div tabindex="0" role="button" class="mystic-btn" id="viewDropdownBtn">Monatsansicht <span class="ml-2 text-[0.6rem]">▼</span></div>
+                    <div tabindex="0" role="button" class="mystic-btn" id="viewDropdownBtn"><span data-i18n="viewMonth">Monatsansicht</span> <span class="ml-2 text-[0.6rem]">▼</span></div>
                     <ul tabindex="0" class="dropdown-content z-[1] menu p-1.5 mt-1 shadow-[0_0_15px_var(--theme-gold-glow)] bg-[var(--theme-modal-bg)] border border-[var(--theme-border-gold)] rounded-sm w-48 text-[var(--theme-gold)] font-raleway font-light">
-                        <li><a id="optMonth" class="hover:bg-[var(--theme-hover-gold)] active:bg-[var(--theme-gold)] active:text-[var(--theme-bg-color)] rounded-sm py-2">Monatsansicht</a></li>
-                        <li><a id="optWeek" class="hover:bg-[var(--theme-hover-gold)] active:bg-[var(--theme-gold)] active:text-[var(--theme-bg-color)] rounded-sm py-2">Wochenansicht</a></li>
-                        <li><a id="optDay" class="hover:bg-[var(--theme-hover-gold)] active:bg-[var(--theme-gold)] active:text-[var(--theme-bg-color)] rounded-sm py-2">Tagesansicht</a></li>
+                        <li><a id="optMonth" class="hover:bg-[var(--theme-hover-gold)] active:bg-[var(--theme-gold)] active:text-[var(--theme-bg-color)] rounded-sm py-2" data-i18n="viewMonth">Monatsansicht</a></li>
+                        <li><a id="optWeek" class="hover:bg-[var(--theme-hover-gold)] active:bg-[var(--theme-gold)] active:text-[var(--theme-bg-color)] rounded-sm py-2" data-i18n="viewWeek">Wochenansicht</a></li>
+                        <li><a id="optDay" class="hover:bg-[var(--theme-hover-gold)] active:bg-[var(--theme-gold)] active:text-[var(--theme-bg-color)] rounded-sm py-2" data-i18n="viewDay">Tagesansicht</a></li>
                     </ul>
                 </div>
             </div>
             <div class="file-upload mt-4 md:mt-0 flex gap-2 items-center">
-                <button onclick="settingsModal.showModal()" class="mystic-btn px-4" title="Einstellungen">⚙️ Einstellungen</button>
+                <button onclick="settingsModal.showModal()" class="mystic-btn px-4" title="Einstellungen" data-i18n="settingsTitle">⚙️ Einstellungen</button>
             </div>
         </header>
         
@@ -67,7 +67,7 @@
             <h2 id="modalDate" class="heading-mystic text-xl md:text-2xl text-[var(--theme-gold-light)] mb-1">Datum</h2>
             <p id="modalGregorian" class="italic text-[color-mix(in_srgb,var(--theme-gold)_60%,transparent)] mb-4 border-b border-[var(--theme-border-gold)] pb-3 font-light text-sm md:text-base"></p>
             <div id="modalDetails" class="mb-5 font-light text-sm md:text-base space-y-1"></div>
-            <h3 class="heading-mystic text-lg md:text-xl mb-2">Ereignisse</h3>
+            <h3 class="heading-mystic text-lg md:text-xl mb-2" data-i18n="modalEvents">Ereignisse</h3>
             <ul id="modalEvents" class="list-disc pl-5 font-light text-sm md:text-base space-y-1"></ul>
         </div>
         <form method="dialog" class="modal-backdrop">
@@ -80,27 +80,42 @@
             <form method="dialog">
                 <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-[var(--theme-gold)] hover:bg-[var(--theme-hover-gold)] border-none text-lg">✕</button>
             </form>
-            <h2 class="heading-mystic text-xl md:text-2xl text-[var(--theme-gold-light)] mb-6">Einstellungen</h2>
+            <h2 class="heading-mystic text-xl md:text-2xl text-[var(--theme-gold-light)] mb-6" data-i18n="settingsTitle">Einstellungen</h2>
             
             <div class="space-y-6 font-light text-sm md:text-base">
+                <!-- Language -->
+                <div>
+                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2" data-i18n="settingsLanguage">Sprache</h3>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="language" value="de" class="radio radio-sm border-[var(--theme-gold)] checked:bg-[var(--theme-gold)]" checked />
+                            <span>Deutsch</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="language" value="en" class="radio radio-sm border-[var(--theme-gold)] checked:bg-[var(--theme-gold)]" />
+                            <span>English</span>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Theme -->
                 <div>
-                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2">Darstellung</h3>
+                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2" data-i18n="settingsTheme">Darstellung</h3>
                     <div class="flex gap-4">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="theme" value="dark" class="radio radio-sm border-[var(--theme-gold)] checked:bg-[var(--theme-gold)]" checked />
-                            <span>Dark Mode</span>
+                            <span data-i18n="settingsThemeDark">Dark Mode</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="theme" value="light" class="radio radio-sm border-[var(--theme-gold)] checked:bg-[var(--theme-gold)]" />
-                            <span>Light Mode</span>
+                            <span data-i18n="settingsThemeLight">Light Mode</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- Start of Year -->
                 <div>
-                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2">Jahresanfang</h3>
+                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2" data-i18n="settingsYearStart">Jahresanfang</h3>
                     <div class="flex gap-4">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="yearStart" value="20" class="radio radio-sm border-[var(--theme-gold)] checked:bg-[var(--theme-gold)]" />
@@ -115,33 +130,31 @@
 
                 <!-- Week Start -->
                 <div>
-                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2">Wochenanfang</h3>
+                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2" data-i18n="settingsWeekStart">Wochenanfang</h3>
                     <div class="flex gap-4">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="weekStart" value="1" class="radio radio-sm border-[var(--theme-gold)] checked:bg-[var(--theme-gold)]" checked />
-                            <span>Montag</span>
+                            <span data-i18n="settingsWeekMonday">Montag</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="weekStart" value="0" class="radio radio-sm border-[var(--theme-gold)] checked:bg-[var(--theme-gold)]" />
-                            <span>Sonntag</span>
+                            <span data-i18n="settingsWeekSunday">Sonntag</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- Location -->
                 <div>
-                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2">Standort <span class="text-xs opacity-60 font-light">(für Sonnen/Mond Zeiten)</span></h3>
+                    <h3 class="font-medium text-[var(--theme-gold-light)] mb-2"><span data-i18n="settingsLocation">Standort</span> <span class="text-xs opacity-60 font-light" data-i18n="settingsLocationSub">(für Sonnen/Mond Zeiten)</span></h3>
                     <div class="flex gap-2 mb-2">
-                        <input type="text" id="locationInput" placeholder="z.B. Zürich, Switzerland" class="input input-sm md:input-md w-full bg-[var(--theme-cell-bg)] border-[var(--theme-border-gold)] text-[var(--theme-gold)] focus:border-[var(--theme-gold)] rounded-sm font-raleway placeholder-opacity-50" />
-                        <button id="searchLocationBtn" class="mystic-btn px-4">Suchen</button>
+                        <input type="text" id="locationInput" data-i18n="locationPlaceholder" placeholder="z.B. Zürich, Switzerland" class="input input-sm md:input-md w-full bg-[var(--theme-cell-bg)] border-[var(--theme-border-gold)] text-[var(--theme-gold)] focus:border-[var(--theme-gold)] rounded-sm font-raleway placeholder-opacity-50" />
+                        <button id="searchLocationBtn" class="mystic-btn px-4" data-i18n="searchBtn">Suchen</button>
                     </div>
                     <div class="flex justify-between items-center text-xs mt-2">
-                        <span id="currentLocationText" class="opacity-70 italic">Kein Standort gewählt</span>
+                        <span id="currentLocationText" class="opacity-70 italic" data-i18n="noLocation">Kein Standort gewählt</span>
                         <div class="flex gap-3">
-                            <button id="resetLocationBtn" class="underline opacity-60 hover:opacity-100 hidden">✕ Zurücksetzen</button>
-                            <button id="gpsLocationBtn" class="underline opacity-80 hover:opacity-100 flex items-center gap-1">
-                                <span>📍 GPS verwenden</span>
-                            </button>
+                            <button id="resetLocationBtn" class="underline opacity-60 hover:opacity-100 hidden" data-i18n="resetBtn">✕ Zurücksetzen</button>
+                            <button id="gpsLocationBtn" class="underline opacity-80 hover:opacity-100 flex items-center gap-1"><span data-i18n="gpsBtn">📍 GPS verwenden</span></button>
                         </div>
                     </div>
                 </div>
@@ -149,16 +162,16 @@
                 <!-- CSV Upload -->
                 <div class="border-t border-[var(--theme-border-gold)] pt-4">
                     <h3 class="font-medium text-[var(--theme-gold-light)] mb-2 flex items-center gap-2">
-                        Eigene Ereignisse
+                        <span data-i18n="settingsEvents">Eigene Ereignisse</span>
                         <button onclick="infoModal.showModal()" class="w-5 h-5 rounded-full border border-[var(--theme-gold)] text-xs flex items-center justify-center opacity-70 hover:opacity-100 bg-transparent cursor-pointer" title="CSV Format Info">?</button>
                     </h3>
-                    <label for="csvUpload" class="mystic-upload-label w-full text-center block">📁 events.csv hochladen</label>
+                    <label for="csvUpload" class="mystic-upload-label w-full text-center block" data-i18n="settingsEventsUpload">📁 events.csv hochladen</label>
                     <input type="file" id="csvUpload" accept=".csv" class="hidden">
-                    <div id="csvStatus" class="text-xs text-center mt-2 opacity-70 italic hidden">Datei geladen</div>
+                    <div id="csvStatus" class="text-xs text-center mt-2 opacity-70 italic hidden" data-i18n="fileLoaded">Datei geladen</div>
                 </div>
                 
                 <div class="pt-6 text-center text-xs opacity-30 font-light">
-                    v1.1.0<br>
+                    v2.0.0<br>
                     <span class="text-[0.65rem] italic">Build: <%= buildTime %></span>
                 </div>
             </div>
@@ -192,7 +205,7 @@
                 <p class="text-[0.8rem] opacity-80 italic">Mehrere Termine pro Tag sind möglich (neue Zeile in der CSV).</p>
             </div>
             <form method="dialog" class="mt-6 flex justify-end">
-                <button class="mystic-btn">Verstanden</button>
+                <button class="mystic-btn" data-i18n="closeBtn">Verstanden</button>
             </form>
         </div>
         <form method="dialog" class="modal-backdrop">

@@ -3,6 +3,19 @@ import SunCalc from 'suncalc';
 import Holidays from 'date-holidays';
 import { EclipticGeoMoon, SearchMoonNode, MakeTime, SearchMoonQuarter, Seasons } from 'astronomy-engine';
 import { LongCount } from '@drewsonne/maya-dates/lib/index.js';
+import { translations } from './translations.js';
+
+// Initialize language
+let currentLang = localStorage.getItem('language');
+if (!currentLang) {
+    currentLang = navigator.language.startsWith('en') ? 'en' : 'de';
+}
+const t = (key, category = null) => {
+    if (category) {
+        return translations[currentLang][category][key] || key;
+    }
+    return translations[currentLang][key] || key;
+};
 
 // Initialize holidays for multiple countries, sorting DE first
 const HOLIDAY_COUNTRIES = ['DE', 'AT', 'CH', 'FR', 'US', 'GB'];
@@ -14,61 +27,66 @@ const DAYS_PER_MONTH = 28;
 const START_MONTH = 2; // March (0-indexed)
 let START_DAY = parseInt(localStorage.getItem('yearStart')) || 21; // March 20st or 21st
 let WEEK_START = parseInt(localStorage.getItem('weekStart') || '1'); // 1 = Monday, 0 = Sunday
-const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-if (WEEK_START === 0) {
-    WEEKDAYS.unshift(WEEKDAYS.pop()); // Shift Sunday to front
-}
-
-const ELEMENTS = {
-    'Feuer': { name: 'Feuer', icon: '🔥' },
-    'Erde': { name: 'Erde', icon: '🌍' },
-    'Luft': { name: 'Luft', icon: '💨' },
-    'Wasser': { name: 'Wasser', icon: '💧' },
-    'Äther': { name: 'Äther', icon: '✨' }
+let WEEKDAYS = [];
+const updateWeekdays = () => {
+    WEEKDAYS = [...translations[currentLang].weekdaysFull];
+    if (WEEK_START === 1) { // 1 = Monday, 0 = Sunday. translations are Sunday-first.
+        WEEKDAYS.push(WEEKDAYS.shift()); // Shift Sunday to end to start with Monday
+    }
 };
+updateWeekdays();
+
+const getZodiacElements = () => ({
+    'Feuer': { id: 'Feuer', icon: '🔥' },
+    'Erde': { id: 'Erde', icon: '🌍' },
+    'Luft': { id: 'Luft', icon: '💨' },
+    'Wasser': { id: 'Wasser', icon: '💧' },
+    'Äther': { id: 'Äther', icon: '✨' }
+});
+let ELEMENTS = getZodiacElements();
 
 // 13 Zodiac Signs (IAU Boundaries approximation)
 const ZODIACS = [
-    { name: 'Steinbock', start: '01-20', end: '02-15', icon: '♑', element: ELEMENTS['Erde'] },
-    { name: 'Wassermann', start: '02-16', end: '03-11', icon: '♒', element: ELEMENTS['Luft'] },
-    { name: 'Fische', start: '03-12', end: '04-18', icon: '♓', element: ELEMENTS['Wasser'] },
-    { name: 'Widder', start: '04-19', end: '05-13', icon: '♈', element: ELEMENTS['Feuer'] },
-    { name: 'Stier', start: '05-14', end: '06-19', icon: '♉', element: ELEMENTS['Erde'] },
-    { name: 'Zwillinge', start: '06-20', end: '07-20', icon: '♊', element: ELEMENTS['Luft'] },
-    { name: 'Krebs', start: '07-21', end: '08-09', icon: '♋', element: ELEMENTS['Wasser'] },
-    { name: 'Löwe', start: '08-10', end: '09-15', icon: '♌', element: ELEMENTS['Feuer'] },
-    { name: 'Jungfrau', start: '09-16', end: '10-30', icon: '♍', element: ELEMENTS['Erde'] },
-    { name: 'Waage', start: '10-31', end: '11-22', icon: '♎', element: ELEMENTS['Luft'] },
-    { name: 'Skorpion', start: '11-23', end: '11-29', icon: '♏', element: ELEMENTS['Wasser'] },
-    { name: 'Schlangenträger (Ophiuchus)', start: '11-30', end: '12-17', icon: '⛎', element: ELEMENTS['Äther'] },
-    { name: 'Schütze', start: '12-18', end: '12-31', icon: '♐', element: ELEMENTS['Feuer'] },
-    { name: 'Schütze', start: '01-01', end: '01-19', icon: '♐', element: ELEMENTS['Feuer'] } // Handling year wrap-around
+    { id: 'Steinbock', start: '01-20', end: '02-15', icon: '♑', element: ELEMENTS['Erde'] },
+    { id: 'Wassermann', start: '02-16', end: '03-11', icon: '♒', element: ELEMENTS['Luft'] },
+    { id: 'Fische', start: '03-12', end: '04-18', icon: '♓', element: ELEMENTS['Wasser'] },
+    { id: 'Widder', start: '04-19', end: '05-13', icon: '♈', element: ELEMENTS['Feuer'] },
+    { id: 'Stier', start: '05-14', end: '06-19', icon: '♉', element: ELEMENTS['Erde'] },
+    { id: 'Zwillinge', start: '06-20', end: '07-20', icon: '♊', element: ELEMENTS['Luft'] },
+    { id: 'Krebs', start: '07-21', end: '08-09', icon: '♋', element: ELEMENTS['Wasser'] },
+    { id: 'Löwe', start: '08-10', end: '09-15', icon: '♌', element: ELEMENTS['Feuer'] },
+    { id: 'Jungfrau', start: '09-16', end: '10-30', icon: '♍', element: ELEMENTS['Erde'] },
+    { id: 'Waage', start: '10-31', end: '11-22', icon: '♎', element: ELEMENTS['Luft'] },
+    { id: 'Skorpion', start: '11-23', end: '11-29', icon: '♏', element: ELEMENTS['Wasser'] },
+    { id: 'Schlangenträger', start: '11-30', end: '12-17', icon: '⛎', element: ELEMENTS['Äther'] },
+    { id: 'Schütze', start: '12-18', end: '12-31', icon: '♐', element: ELEMENTS['Feuer'] },
+    { id: 'Schütze', start: '01-01', end: '01-19', icon: '♐', element: ELEMENTS['Feuer'] } // Handling year wrap-around
 ];
 
 // 12 Traditional Zodiac Signs (Tropical Boundaries approximation)
 const TRADITIONAL_ZODIACS = [
-    { name: 'Steinbock', start: '12-22', end: '12-31', icon: '♑', element: ELEMENTS['Erde'] },
-    { name: 'Steinbock', start: '01-01', end: '01-19', icon: '♑', element: ELEMENTS['Erde'] }, // wrap around
-    { name: 'Wassermann', start: '01-20', end: '02-18', icon: '♒', element: ELEMENTS['Luft'] },
-    { name: 'Fische', start: '02-19', end: '03-20', icon: '♓', element: ELEMENTS['Wasser'] },
-    { name: 'Widder', start: '03-21', end: '04-19', icon: '♈', element: ELEMENTS['Feuer'] },
-    { name: 'Stier', start: '04-20', end: '05-20', icon: '♉', element: ELEMENTS['Erde'] },
-    { name: 'Zwillinge', start: '05-21', end: '06-20', icon: '♊', element: ELEMENTS['Luft'] },
-    { name: 'Krebs', start: '06-21', end: '07-22', icon: '♋', element: ELEMENTS['Wasser'] },
-    { name: 'Löwe', start: '07-23', end: '08-22', icon: '♌', element: ELEMENTS['Feuer'] },
-    { name: 'Jungfrau', start: '08-23', end: '09-22', icon: '♍', element: ELEMENTS['Erde'] },
-    { name: 'Waage', start: '09-23', end: '10-22', icon: '♎', element: ELEMENTS['Luft'] },
-    { name: 'Skorpion', start: '10-23', end: '11-21', icon: '♏', element: ELEMENTS['Wasser'] },
-    { name: 'Schütze', start: '11-22', end: '12-21', icon: '♐', element: ELEMENTS['Feuer'] }
+    { id: 'Steinbock', start: '12-22', end: '12-31', icon: '♑', element: ELEMENTS['Erde'] },
+    { id: 'Steinbock', start: '01-01', end: '01-19', icon: '♑', element: ELEMENTS['Erde'] }, // wrap around
+    { id: 'Wassermann', start: '01-20', end: '02-18', icon: '♒', element: ELEMENTS['Luft'] },
+    { id: 'Fische', start: '02-19', end: '03-20', icon: '♓', element: ELEMENTS['Wasser'] },
+    { id: 'Widder', start: '03-21', end: '04-19', icon: '♈', element: ELEMENTS['Feuer'] },
+    { id: 'Stier', start: '04-20', end: '05-20', icon: '♉', element: ELEMENTS['Erde'] },
+    { id: 'Zwillinge', start: '05-21', end: '06-20', icon: '♊', element: ELEMENTS['Luft'] },
+    { id: 'Krebs', start: '06-21', end: '07-22', icon: '♋', element: ELEMENTS['Wasser'] },
+    { id: 'Löwe', start: '07-23', end: '08-22', icon: '♌', element: ELEMENTS['Feuer'] },
+    { id: 'Jungfrau', start: '08-23', end: '09-22', icon: '♍', element: ELEMENTS['Erde'] },
+    { id: 'Waage', start: '09-23', end: '10-22', icon: '♎', element: ELEMENTS['Luft'] },
+    { id: 'Skorpion', start: '10-23', end: '11-21', icon: '♏', element: ELEMENTS['Wasser'] },
+    { id: 'Schütze', start: '11-22', end: '12-21', icon: '♐', element: ELEMENTS['Feuer'] }
 ];
 
 // Jahreskreis-Feste (Sabbats / Cardinals)
 // The Equinoxes and Solstices are now dynamically calculated via getExactSeasonTime
 const YEAR_WHEEL = {
     '05-01': 'Beltane',
-    '08-01': 'Lughnasadh (Lammas)',
-    '11-01': 'Samhain',
-    '02-01': 'Imbolc'
+    '08-01': 'Lughnasadh', // Changed to match dictionary
+    '11-01': 'Samhain (Halloween)',
+    '02-01': 'Imbolc (Lichtmess)'
 };
 
 const SEASONS_CACHE = {};
@@ -89,18 +107,18 @@ function getExactSeasonTime(date) {
         SEASONS_CACHE[year] = Seasons(year);
     }
     const s = SEASONS_CACHE[year];
-    const check = (astroTime, name) => {
+    const check = (astroTime, id) => {
         if (astroTime.date.getFullYear() === date.getFullYear() &&
             astroTime.date.getMonth() === date.getMonth() &&
             astroTime.date.getDate() === date.getDate()) {
-            return { name, time: astroTime.date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'}) };
+            return { name: t(id, 'specialDays'), time: astroTime.date.toLocaleTimeString(currentLang === 'de' ? 'de-DE' : 'en-US', {hour: '2-digit', minute:'2-digit'}) };
         }
         return null;
     };
-    return check(s.mar_equinox, 'Ostara (Frühlingstagundnachtgleiche)') ||
-           check(s.jun_solstice, 'Litha (Sommersonnenwende)') ||
-           check(s.sep_equinox, 'Mabon (Herbsttagundnachtgleiche)') ||
-           check(s.dec_solstice, 'Yul (Wintersonnenwende)');
+    return check(s.mar_equinox, 'Ostara (Frühlings-Tagundnachtgleiche)') ||
+           check(s.jun_solstice, 'Mabon (Sommersonnenwende)') || // Will use "Litha (Summer Solstice)" in EN based on dictionary
+           check(s.sep_equinox, 'Mabon (Herbst-Tagundnachtgleiche)') ||
+           check(s.dec_solstice, 'Yule (Wintersonnenwende)');
 }
 
 function getExactMoonPhaseTime(date) {
@@ -110,14 +128,30 @@ function getExactMoonPhaseTime(date) {
     if (mq.time.date >= startOfDay && mq.time.date < endOfDay) {
         let name = '';
         let icon = '';
-        if (mq.quarter === 0) { icon = '🌑'; name = 'Neumond'; }
-        if (mq.quarter === 1) { icon = '🌓'; name = 'Zunehmender Halbmond'; }
-        if (mq.quarter === 2) { icon = '🌕'; name = 'Vollmond'; }
-        if (mq.quarter === 3) { icon = '🌗'; name = 'Abnehmender Halbmond'; }
-        return { icon, name, time: mq.time.date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'}), quarter: mq.quarter };
+        if (mq.quarter === 0) { icon = '🌑'; name = t('moonNew'); }
+        if (mq.quarter === 1) { icon = '🌓'; name = t('moonFirstQuarter'); }
+        if (mq.quarter === 2) { icon = '🌕'; name = t('moonFull'); }
+        if (mq.quarter === 3) { icon = '🌗'; name = t('moonLastQuarter'); }
+        return { icon, name, time: mq.time.date.toLocaleTimeString(currentLang === 'de' ? 'de-DE' : 'en-US', {hour: '2-digit', minute:'2-digit'}), quarter: mq.quarter };
     }
     return null;
 }
+
+const translateUI = () => {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (el.tagName === 'INPUT') {
+            el.placeholder = t(key);
+        } else {
+            el.innerHTML = t(key);
+        }
+    });
+    // Update active dropdown text
+    document.querySelector('#viewDropdownBtn span[data-i18n]').innerHTML = t(currentView === 'month' ? 'viewMonth' : currentView === 'week' ? 'viewWeek' : 'viewDay');
+    
+    // Update language selector UI correctly
+    document.querySelector(`input[name="language"][value="${currentLang}"]`).checked = true;
+};
 
 // State
 let currentYear = new Date().getFullYear(); // Gregorian year of the 13-month calendar start
@@ -152,6 +186,22 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('light-mode');
     }
     
+    // Language setup from Settings Modal
+    const langRadios = document.querySelectorAll('input[name="language"]');
+    langRadios.forEach(radio => {
+        if (radio.value === currentLang) {
+            radio.checked = true;
+        }
+        radio.addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('language', currentLang);
+            updateWeekdays(); // Re-apply language specific weekdays
+            ELEMENTS = getZodiacElements(); // Refresh translations for elements
+            translateUI();
+            renderCalendar();
+        });
+    });
+
     // Theme setup from Settings Modal
     const themeRadios = document.querySelectorAll('input[name="theme"]');
     themeRadios.forEach(radio => {
@@ -217,10 +267,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (name) localStorage.setItem('userLocName', name);
         else localStorage.removeItem('userLocName');
         
-        currentLocationText.textContent = name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        // Ensure "📍 GPS Location" is translated correctly when displaying
+        let displayName = name;
+        if (name === '📍 GPS Standort' || name === '📍 GPS Location') displayName = t('gpsLocation');
+        
+        currentLocationText.textContent = displayName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        currentLocationText.removeAttribute('data-i18n');
         currentLocationText.classList.remove('opacity-70', 'italic');
         resetLocationBtn.classList.remove('hidden');
-        renderCalendar();
     };
 
     resetLocationBtn.addEventListener('click', () => {
@@ -230,7 +284,8 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('userLng');
         localStorage.removeItem('userLocName');
         
-        currentLocationText.textContent = 'Kein Standort gewählt';
+        currentLocationText.textContent = t('noLocation');
+        currentLocationText.setAttribute('data-i18n', 'noLocation');
         currentLocationText.classList.add('opacity-70', 'italic');
         resetLocationBtn.classList.add('hidden');
         renderCalendar();
@@ -270,13 +325,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 locationInput.value = '';
                 locationInput.placeholder = name;
             } else {
-                alert('Ort nicht gefunden. Bitte versuche einen genaueren Namen.');
+                alert(t('errorLocationDetailed'));
             }
         } catch (e) {
             console.error("Location search error:", e);
-            alert(`Fehler bei der Ortssuche: ${e.message}`);
+            alert(`${t('errorLocation')}: ${e.message}`);
         } finally {
-            searchLocationBtn.textContent = 'Suchen';
+            searchLocationBtn.textContent = t('searchBtn');
         }
     });
 
@@ -288,15 +343,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 gpsLocationBtn.innerHTML = '<span>📍 GPS verwenden</span>';
             }, (error) => {
                 console.error("Error getting location:", error);
-                alert("GPS Fehler oder blockiert.");
-                gpsLocationBtn.innerHTML = '<span>📍 GPS verwenden</span>';
+                alert(t('errorGPS'));
+                gpsLocationBtn.innerHTML = `<span>${t('gpsBtn')}</span>`;
             }, {
                 enableHighAccuracy: false,
                 timeout: 10000,
                 maximumAge: 3600000
             });
         } else {
-            alert("Geolocation wird von Deinem Browser nicht unterstützt.");
+            alert("Geolocation not supported.");
         }
     });
     
@@ -312,8 +367,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Default to day view on mobile
     if (window.innerWidth <= 768) {
         currentView = 'day';
-        viewDropdownBtn.innerHTML = `Tagesansicht <span class="ml-2 text-[0.6rem]">▼</span>`;
     }
+    
+    // Set initial dropdown text
+    translateUI();
     
     initCalendar();
     
@@ -393,11 +450,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         currentView = newView;
-        let viewLabel = 'Monatsansicht';
-        if (currentView === 'week') viewLabel = 'Wochenansicht';
-        if (currentView === 'day') viewLabel = 'Tagesansicht';
+        let viewLabel = t('viewMonth');
+        if (currentView === 'week') viewLabel = t('viewWeek');
+        if (currentView === 'day') viewLabel = t('viewDay');
         
-        viewDropdownBtn.innerHTML = `${viewLabel} <span class="ml-2 text-[0.6rem]">▼</span>`;
+        viewDropdownBtn.innerHTML = `<span data-i18n="${currentView === 'month' ? 'viewMonth' : currentView === 'week' ? 'viewWeek' : 'viewDay'}">${viewLabel}</span> <span class="ml-2 text-[0.6rem]">▼</span>`;
         if (document.activeElement) document.activeElement.blur(); // Close DaisyUI dropdown
         renderCalendar();
     };
@@ -435,14 +492,14 @@ function getMoonPhase(date) {
     const phase = moonIllumination.phase; // 0 to 1
     
     // Convert to 8 phases
-    if (phase < 0.03 || phase > 0.97) return { icon: '🌑', name: 'Neumond' };
-    if (phase < 0.22) return { icon: '🌒', name: 'Zunehmende Sichel' };
-    if (phase < 0.28) return { icon: '🌓', name: 'Erstes Viertel' };
-    if (phase < 0.47) return { icon: '🌔', name: 'Zunehmender Mond' };
-    if (phase < 0.53) return { icon: '🌕', name: 'Vollmond' };
-    if (phase < 0.72) return { icon: '🌖', name: 'Abnehmender Mond' };
-    if (phase < 0.78) return { icon: '🌗', name: 'Letztes Viertel' };
-    return { icon: '🌘', name: 'Abnehmende Sichel' };
+    if (phase < 0.03 || phase > 0.97) return { icon: '🌑', name: t('moonNew') };
+    if (phase < 0.22) return { icon: '🌒', name: t('moonWaxingCrescent') };
+    if (phase < 0.28) return { icon: '🌓', name: t('moonFirstQuarter') };
+    if (phase < 0.47) return { icon: '🌔', name: t('moonWaxingGibbous') };
+    if (phase < 0.53) return { icon: '🌕', name: t('moonFull') };
+    if (phase < 0.72) return { icon: '🌖', name: t('moonWaningGibbous') };
+    if (phase < 0.78) return { icon: '🌗', name: t('moonLastQuarter') };
+    return { icon: '🌘', name: t('moonWaningCrescent') };
 }
 
 function getAstroTimes(date) {
@@ -470,8 +527,10 @@ function getAstroTimes(date) {
     let transitionText = null;
     let transitionTextShort = null;
     
+    const fmt = (d) => d && !isNaN(d.getTime()) ? d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--';
+
     if (nextNode && nextNode.time.date >= startOfDay && nextNode.time.date <= endOfDay) {
-        const timeStr = nextNode.time.date.toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'});
+        const timeStr = nextNode.time.date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         if (nextNode.kind === 1) { // Ascending node (crosses to positive lat) -> Nidsigend
             transitionText = `Wechsel nach Nidsigend um ${timeStr}`;
             transitionTextShort = `➔ Nidsig. ${timeStr}`;
@@ -479,9 +538,17 @@ function getAstroTimes(date) {
             transitionText = `Wechsel nach Obsigend um ${timeStr}`;
             transitionTextShort = `➔ Obsig. ${timeStr}`;
         }
+        return {
+            sunrise: fmt(times.sunrise),
+            sunset: fmt(times.sunset),
+            moonrise: fmt(moonTimes.rise),
+            moonset: fmt(moonTimes.set),
+            obsigend: isObsigend,
+            transitionText: transitionText,
+            transitionTextShort: transitionTextShort,
+            transitionTime: timeStr // Added for i18n
+        };
     }
-    
-    const fmt = (d) => d && !isNaN(d.getTime()) ? d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--';
     
     return {
         sunrise: fmt(times.sunrise),
@@ -489,8 +556,9 @@ function getAstroTimes(date) {
         moonrise: fmt(moonTimes.rise),
         moonset: fmt(moonTimes.set),
         obsigend: isObsigend,
-        transitionText: transitionText,
-        transitionTextShort: transitionTextShort
+        transitionText: null,
+        transitionTextShort: null,
+        transitionTime: null
     };
 }
 
@@ -590,14 +658,17 @@ function renderCalendar() {
 }
 
 function renderMonthView(yearDays) {
-    currentPeriodLabel.textContent = `Monat ${currentPeriodIndex + 1} (${currentYear}-${currentYear + 1})`;
+    if (currentPeriodIndex === MONTHS) {
+        currentPeriodLabel.textContent = `${t('specialDays', 'appTitle') || 'Festtage'} (${currentYear}-${currentYear + 1})`;
+    } else {
+        currentPeriodLabel.textContent = `${t('monthPrefix')} ${currentPeriodIndex + 1} (${currentYear}-${currentYear + 1})`;
+    }
     
     let startDayIndex = currentPeriodIndex * DAYS_PER_MONTH;
     let numDays = DAYS_PER_MONTH;
     
     // Check if we are past the 13 months -> render special days
     if (currentPeriodIndex === MONTHS) {
-        currentPeriodLabel.textContent = `Festtage (${currentYear}-${currentYear + 1})`;
         numDays = yearDays - (MONTHS * DAYS_PER_MONTH); // 1 or 2
         calendarGrid.classList.add(`grid-cols-${numDays}`);
     } else {
@@ -612,7 +683,7 @@ function renderMonthView(yearDays) {
 }
 
 function renderWeekView(yearDays) {
-    currentPeriodLabel.textContent = `Woche ${currentPeriodIndex + 1} (${currentYear}-${currentYear + 1})`;
+    currentPeriodLabel.textContent = `${t('viewWeek').split(' ')[0]} ${currentPeriodIndex + 1} (${currentYear}-${currentYear + 1})`;
     
     let startDayIndex = currentPeriodIndex * 7;
     calendarGrid.classList.add('grid-cols-1', 'md:grid-cols-7');
@@ -626,14 +697,12 @@ function renderWeekView(yearDays) {
             calendarGrid.appendChild(emptyCell);
             continue;
         }
-        
-        const isSpecial = dayIndex >= (MONTHS * DAYS_PER_MONTH);
-        calendarGrid.appendChild(createDayCell(dayIndex, isSpecial, 'week'));
+        calendarGrid.appendChild(createDayCell(dayIndex, false, 'week'));
     }
 }
 
 function renderDayView(yearDays) {
-    currentPeriodLabel.textContent = `Tag ${currentPeriodIndex + 1} (${currentYear}-${currentYear + 1})`;
+    currentPeriodLabel.textContent = `${t('viewDay').split(' ')[0]} ${currentPeriodIndex + 1} (${currentYear}-${currentYear + 1})`;
     
     calendarGrid.classList.add('grid-cols-1', 'md:w-2/3', 'lg:w-1/2', 'mx-auto', 'w-full');
     const isSpecial = currentPeriodIndex >= (MONTHS * DAYS_PER_MONTH);
@@ -689,11 +758,12 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     numDiv.className = viewType === 'month' ? 'text-lg md:text-2xl heading-mystic text-[var(--theme-gold)]' : 'text-2xl md:text-4xl heading-mystic text-[var(--theme-gold-light)]';
     if (isSpecialDay) {
         const festtagNum = dayIndex - (MONTHS * DAYS_PER_MONTH) + 1;
-        numDiv.textContent = `Festtag ${festtagNum}`;
+        numDiv.textContent = `${t('specialDays', 'appTitle') || 'Festtag'} ${festtagNum}`;
     } else {
         if (viewType === 'day') {
             const monthIndex = Math.floor(dayIndex / DAYS_PER_MONTH);
-            numDiv.textContent = `${weekday}, Tag ${(dayIndex % DAYS_PER_MONTH) + 1} (Monat ${monthIndex + 1})`;
+            const tagStr = currentLang === 'de' ? 'Tag' : 'Day';
+            numDiv.textContent = `${weekday}, ${tagStr} ${(dayIndex % DAYS_PER_MONTH) + 1} (${t('monthPrefix')} ${monthIndex + 1})`;
         } else if (viewType === 'week') {
             numDiv.innerHTML = `<span class="md:hidden text-lg mr-2">${weekday}, </span>${(dayIndex % DAYS_PER_MONTH) + 1}`; // Removed 'Tag'
         } else {
@@ -728,13 +798,13 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     const moonDiv = document.createElement('div');
     if (viewType === 'month') {
         moonDiv.className = 'text-[0.65rem] md:text-xs opacity-75 font-light';
-        moonDiv.innerHTML = `${phaseData.icon} <span class="hidden md:inline">${phaseData.name}${exactMoon ? ` <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : ''}</span>`;
+        moonDiv.innerHTML = `${phaseData.icon} <span class="hidden md:inline">${phaseData.name}${exactMoon ? ` <span class="opacity-60 text-xs">${t('timeOclock') ? 'um ' : 'at '}${exactMoon.time}</span>` : ''}</span>`;
     } else if (viewType === 'week') {
         moonDiv.className = 'text-xs md:text-sm font-light';
-        moonDiv.innerHTML = `<strong class="opacity-100">Mondphase: </strong>${phaseData.icon} <span>${phaseData.name}</span>${exactMoon ? ` <span class="opacity-60 text-[0.65rem] md:text-xs">um ${exactMoon.time}</span>` : ''}`;
+        moonDiv.innerHTML = `<strong class="opacity-100">${t('moonPhasePrefix')}: </strong>${phaseData.icon} <span>${phaseData.name}</span>${exactMoon ? ` <span class="opacity-60 text-[0.65rem] md:text-xs">${t('timeOclock') ? 'um ' : 'at '}${exactMoon.time}</span>` : ''}`;
     } else {
         moonDiv.className = 'text-sm md:text-base font-light';
-        moonDiv.innerHTML = `<strong class="opacity-100">Mondphase: </strong>${phaseData.icon} <span>${phaseData.name}</span>${exactMoon ? ` <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : ''}`;
+        moonDiv.innerHTML = `<strong class="opacity-100">${t('moonPhasePrefix')}: </strong>${phaseData.icon} <span>${phaseData.name}</span>${exactMoon ? ` <span class="opacity-60 text-xs">${t('timeOclock') ? 'um ' : 'at '}${exactMoon.time}</span>` : ''}`;
     }
     infoContainer.appendChild(moonDiv);
 
@@ -744,15 +814,22 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
         const astroContainer = document.createElement('div');
         astroContainer.className = 'text-sm md:text-base font-light flex flex-col gap-1 mt-2 mb-2 p-3 border border-[var(--theme-border-gold)] rounded-sm bg-[var(--theme-cell-bg)]';
         
-        let laufText = astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend';
+        const obsText = currentLang === 'de' ? 'Obsigend (steigend)' : 'Ascending Node';
+        const nidText = currentLang === 'de' ? 'Nidsigend (fallend)' : 'Descending Node';
+        let laufText = astro.obsigend ? `📈 ${obsText}` : `📉 ${nidText}`;
+        
         if (astro.transitionText) {
-            laufText = `<span class="opacity-60">${astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend'}</span> <span class="block mt-1 text-sm">${astro.transitionText}</span>`;
+            let transitionStr = currentLang === 'de' ? 'Wechsel zu ' : 'Transition to ';
+            transitionStr += astro.obsigend ? nidText : obsText;
+            transitionStr += ` um ${astro.transitionTime}`;
+            if (currentLang !== 'de') transitionStr = transitionStr.replace('um', 'at');
+            laufText = `<span class="opacity-60">${astro.obsigend ? `📈 ${obsText}` : `📉 ${nidText}`}</span> <span class="block mt-1 text-sm">${transitionStr}</span>`;
         }
         
         astroContainer.innerHTML = `
-            <div class="flex justify-between items-center"><strong class="opacity-100">Sonne:</strong> <span class="opacity-80">🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></div>
-            <div class="flex justify-between items-center"><strong class="opacity-100">Mond:</strong> <span class="opacity-80">🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></div>
-            <div class="flex justify-between items-center ${astro.transitionText && viewType === 'day' ? 'items-start' : ''}"><strong class="opacity-100">Lauf:</strong> <span class="opacity-80 text-[var(--theme-gold-light)] text-right">${laufText}</span></div>
+            <div class="flex justify-between items-center"><strong class="opacity-100">${t('modalSun')}:</strong> <span class="opacity-80">🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></div>
+            <div class="flex justify-between items-center"><strong class="opacity-100">${t('modalMoon')}:</strong> <span class="opacity-80">🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></div>
+            <div class="flex justify-between items-center ${astro.transitionText && viewType === 'day' ? 'items-start' : ''}"><strong class="opacity-100">${currentLang === 'de' ? 'Lauf' : 'Path'}:</strong> <span class="opacity-80 text-[var(--theme-gold-light)] text-right">${laufText}</span></div>
         `;
         
         infoContainer.appendChild(astroContainer);
@@ -765,26 +842,26 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     const z13Div = document.createElement('div');
     if (viewType === 'month') {
         z13Div.className = 'text-[0.65rem] md:text-xs opacity-75 font-light';
-        z13Div.innerHTML = `${z13.icon} <span class="hidden md:inline">${z13.name}</span>`;
+        z13Div.innerHTML = `${z13.icon} <span class="hidden md:inline">${t(z13.id, 'zodiacs')}</span>`;
     } else if (viewType === 'week') {
         z13Div.className = 'text-xs md:text-sm font-light';
-        z13Div.innerHTML = `<strong class="opacity-100">Sternzeichen (13): </strong>${z13.icon} <span>${z13.name}</span> <span class="ml-1 text-[0.65rem] md:text-[0.7rem] opacity-70">(${z13.element.icon} ${z13.element.name})</span>`;
+        z13Div.innerHTML = `<strong class="opacity-100">${t('modalZodiac')} (13): </strong>${z13.icon} <span>${t(z13.id, 'zodiacs')}</span> <span class="ml-1 text-[0.65rem] md:text-[0.7rem] opacity-70">(${z13.element.icon} ${t(z13.element.id, 'elements')})</span>`;
     } else {
         z13Div.className = 'text-sm md:text-base font-light';
-        z13Div.innerHTML = `<strong class="opacity-100">Sternzeichen (13): </strong>${z13.icon} <span>${z13.name}</span> <span class="ml-2 text-xs opacity-70">(${z13.element.icon} ${z13.element.name})</span>`;
+        z13Div.innerHTML = `<strong class="opacity-100">${t('modalZodiac')} (13): </strong>${z13.icon} <span>${t(z13.id, 'zodiacs')}</span> <span class="ml-2 text-xs opacity-70">(${z13.element.icon} ${t(z13.element.id, 'elements')})</span>`;
     }
     infoContainer.appendChild(z13Div);
 
     if (viewType === 'day') {
         const z12Div = document.createElement('div');
         z12Div.className = 'text-sm md:text-base font-light';
-        z12Div.innerHTML = `<strong class="opacity-100">Sternzeichen (12):</strong> ${z12.icon} ${z12.name} <span class="ml-2 text-xs opacity-70">(${z12.element.icon} ${z12.element.name})</span>`;
+        z12Div.innerHTML = `<strong class="opacity-100">${t('modalZodiac')} (12):</strong> ${z12.icon} ${t(z12.id, 'zodiacs')} <span class="ml-2 text-xs opacity-70">(${z12.element.icon} ${t(z12.element.id, 'elements')})</span>`;
         infoContainer.appendChild(z12Div);
         
         const maya = getMayaDate(gregorianDate);
         const mayaDiv = document.createElement('div');
         mayaDiv.className = 'text-sm md:text-base font-light mt-1';
-        mayaDiv.innerHTML = `<strong class="opacity-100">Maya Kalender:</strong> ${maya.calendarRound} <span class="ml-2 text-xs opacity-70">(LC: ${maya.longCount})</span>`;
+        mayaDiv.innerHTML = `<strong class="opacity-100">${t('modalMaya')}:</strong> ${maya.calendarRound} <span class="ml-2 text-xs opacity-70">(LC: ${maya.longCount})</span>`;
         infoContainer.appendChild(mayaDiv);
     }
 
@@ -793,17 +870,17 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
     // Special Days (Cardinals / Wheel)
     if (YEAR_WHEEL[mmdd]) {
         hasEventsOrSpecial = true;
-        const specName = YEAR_WHEEL[mmdd];
+        const specName = t(YEAR_WHEEL[mmdd], 'specialDays');
         const specDiv = document.createElement('div');
         if (viewType === 'month') {
             specDiv.className = 'hidden md:block text-[0.65rem] md:text-xs mt-1 font-medium text-[var(--theme-gold)] drop-shadow-[0_0_5px_var(--theme-gold-glow)]';
             specDiv.innerHTML = specName;
         } else if (viewType === 'week') {
             specDiv.className = 'text-xs md:text-sm font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-1';
-            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">Jahreskreisfest:</strong> ${specName}`;
+            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">${t('modalZodiac') === 'Zodiac' ? 'Wheel of the Year' : 'Jahreskreisfest'}:</strong> ${specName}`;
         } else {
             specDiv.className = 'text-sm md:text-base font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-2 md:mt-0';
-            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">Jahreskreisfest:</strong> ${specName}`;
+            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">${t('modalZodiac') === 'Zodiac' ? 'Wheel of the Year' : 'Jahreskreisfest'}:</strong> ${specName}`;
         }
         infoContainer.appendChild(specDiv);
     }
@@ -817,10 +894,10 @@ function createDayCell(dayIndex, isSpecialDay, viewType) {
             specDiv.innerHTML = `${exactSeason.name} <span class="opacity-60 text-[0.55rem] block">${exactSeason.time}</span>`;
         } else if (viewType === 'week') {
             specDiv.className = 'text-xs md:text-sm font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-1';
-            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">Wende/TagNacht:</strong> ${exactSeason.name} <span class="opacity-60 text-[0.65rem] md:text-xs">um ${exactSeason.time}</span>`;
+            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">${t('modalZodiac') === 'Zodiac' ? 'Equinox/Solstice' : 'Wende/TagNacht'}:</strong> ${exactSeason.name} <span class="opacity-60 text-[0.65rem] md:text-xs">${t('timeOclock') ? 'um ' : 'at '}${exactSeason.time}</span>`;
         } else {
             specDiv.className = 'text-sm md:text-base font-medium text-[var(--theme-gold-light)] drop-shadow-[0_0_8px_var(--theme-gold-glow)] mt-2 md:mt-0';
-            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">Wende/TagNacht:</strong> ${exactSeason.name} <span class="opacity-60 text-xs">um ${exactSeason.time}</span>`;
+            specDiv.innerHTML = `<strong class="opacity-100 text-[var(--theme-gold)]">${t('modalZodiac') === 'Zodiac' ? 'Equinox/Solstice' : 'Wende/TagNacht'}:</strong> ${exactSeason.name} <span class="opacity-60 text-xs">${t('timeOclock') ? 'um ' : 'at '}${exactSeason.time}</span>`;
         }
         infoContainer.appendChild(specDiv);
     }
@@ -899,47 +976,57 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
     const monthIndex = Math.floor(dayIndex / DAYS_PER_MONTH);
     
     if (isSpecialDay) {
-        document.getElementById('modalDate').textContent = `Festtag ${dayIndex - (MONTHS * DAYS_PER_MONTH) + 1} (Jahr ${currentYear})`;
+        document.getElementById('modalDate').textContent = `${t('specialDays', 'appTitle') || 'Festtag'} ${dayIndex - (MONTHS * DAYS_PER_MONTH) + 1} (${currentYear})`;
     } else {
         const dayOfMonth = (dayIndex % DAYS_PER_MONTH) + 1;
         const weekday = WEEKDAYS[dayIndex % 7];
-        document.getElementById('modalDate').textContent = `${weekday}, Tag ${dayOfMonth} im Monat ${monthIndex + 1}`;
+        const tagStr = currentLang === 'de' ? 'Tag' : 'Day';
+        const imMonatStr = currentLang === 'de' ? 'im Monat' : 'in Month';
+        document.getElementById('modalDate').textContent = `${weekday}, ${tagStr} ${dayOfMonth} ${imMonatStr} ${monthIndex + 1}`;
     }
     
     const gregOptions = { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' };
-    document.getElementById('modalGregorian').textContent = `Gregorianisch: ${gregorianDate.toLocaleDateString('de-DE', gregOptions)} (${dateStr})`;
+    const localeString = currentLang === 'de' ? 'de-DE' : 'en-US';
+    const gregPrefix = currentLang === 'de' ? 'Gregorianisch' : 'Gregorian';
+    document.getElementById('modalGregorian').textContent = `${gregPrefix}: ${gregorianDate.toLocaleDateString(localeString, gregOptions)} (${dateStr})`;
     
     const exactMoon = getExactMoonPhaseTime(gregorianDate);
     const phaseData = exactMoon || getMoonPhase(gregorianDate);
-    let detailsHTML = `<p><strong>Mondphase:</strong> ${phaseData.icon} ${phaseData.name}${exactMoon ? ` <span class="opacity-60 text-xs">um ${exactMoon.time}</span>` : ''}</p>`;
+    let detailsHTML = `<p><strong>${t('moonPhasePrefix')}:</strong> ${phaseData.icon} ${phaseData.name}${exactMoon ? ` <span class="opacity-60 text-xs">${t('timeOclock') ? 'um ' : 'at '}${exactMoon.time}</span>` : ''}</p>`;
     
     const z13 = getZodiac(gregorianDate);
     const z12 = getTraditionalZodiac(gregorianDate);
     const maya = getMayaDate(gregorianDate);
-    detailsHTML += `<p><strong>Sternzeichen (13):</strong> ${z13.icon} ${z13.name} <span class="ml-2 text-xs opacity-70">(${z13.element.icon} ${z13.element.name})</span></p>`;
-    detailsHTML += `<p><strong>Sternzeichen (12):</strong> ${z12.icon} ${z12.name} <span class="ml-2 text-xs opacity-70">(${z12.element.icon} ${z12.element.name})</span></p>`;
-    detailsHTML += `<p><strong>Maya Kalender:</strong> ${maya.calendarRound} <span class="ml-2 text-xs opacity-70">(LC: ${maya.longCount})</span></p>`;
+    detailsHTML += `<p><strong>${t('modalZodiac')} (13):</strong> ${z13.icon} ${t(z13.id, 'zodiacs')} <span class="ml-2 text-xs opacity-70">(${z13.element.icon} ${t(z13.element.id, 'elements')})</span></p>`;
+    detailsHTML += `<p><strong>${t('modalZodiac')} (12):</strong> ${z12.icon} ${t(z12.id, 'zodiacs')} <span class="ml-2 text-xs opacity-70">(${z12.element.icon} ${t(z12.element.id, 'elements')})</span></p>`;
+    detailsHTML += `<p><strong>${t('modalMaya')}:</strong> ${maya.calendarRound} <span class="ml-2 text-xs opacity-70">(LC: ${maya.longCount})</span></p>`;
     
     const astro = getAstroTimes(gregorianDate);
     if (astro) {
-        let laufText = astro.obsigend ? '📈 Obsigend' : '📉 Nidsigend';
+        const obsText = currentLang === 'de' ? 'Obsigend (steigend)' : 'Ascending Node';
+        const nidText = currentLang === 'de' ? 'Nidsigend (fallend)' : 'Descending Node';
+        let laufText = astro.obsigend ? `📈 ${obsText}` : `📉 ${nidText}`;
         if (astro.transitionText) {
-            laufText += ` <span class="block text-sm opacity-80 mt-1">${astro.transitionText}</span>`;
+            let transitionStr = currentLang === 'de' ? 'Wechsel zu ' : 'Transition to ';
+            transitionStr += astro.obsigend ? nidText : obsText;
+            transitionStr += ` um ${astro.transitionTime}`;
+            if (currentLang !== 'de') transitionStr = transitionStr.replace('um', 'at');
+            laufText += ` <span class="block text-sm opacity-80 mt-1">${transitionStr}</span>`;
         }
         detailsHTML += `<div class="mt-3 mb-3 p-3 border border-[var(--theme-border-gold)] bg-[var(--theme-cell-bg)] rounded-sm space-y-1">
-            <p class="flex justify-between"><strong>Sonne:</strong> <span>🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></p>
-            <p class="flex justify-between"><strong>Mond:</strong> <span>🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></p>
-            <p class="flex justify-between items-start"><strong>Lauf:</strong> <span class="text-[var(--theme-gold-light)] text-right">${laufText}</span></p>
+            <p class="flex justify-between"><strong>${t('modalSun')}:</strong> <span>🌅 ${astro.sunrise} &nbsp;|&nbsp; 🌇 ${astro.sunset}</span></p>
+            <p class="flex justify-between"><strong>${t('modalMoon')}:</strong> <span>🌒 ${astro.moonrise} &nbsp;|&nbsp; 🌘 ${astro.moonset}</span></p>
+            <p class="flex justify-between items-start"><strong>${currentLang === 'de' ? 'Lauf' : 'Path'}:</strong> <span class="text-[var(--theme-gold-light)] text-right">${laufText}</span></p>
         </div>`;
     }
 
     if (YEAR_WHEEL[mmdd]) {
-        detailsHTML += `<p><strong>Jahreskreisfest:</strong> ${YEAR_WHEEL[mmdd]}</p>`;
+        detailsHTML += `<p><strong>${t('modalZodiac') === 'Zodiac' ? 'Wheel of the Year' : 'Jahreskreisfest'}:</strong> ${t(YEAR_WHEEL[mmdd], 'specialDays')}</p>`;
     }
     
     const exactSeason = getExactSeasonTime(gregorianDate);
     if (exactSeason) {
-        detailsHTML += `<p><strong class="text-[var(--theme-gold)]">Wende/TagNacht:</strong> ${exactSeason.name} <span class="opacity-60 text-xs">um ${exactSeason.time}</span></p>`;
+        detailsHTML += `<p><strong class="text-[var(--theme-gold)]">${t('modalZodiac') === 'Zodiac' ? 'Equinox/Solstice' : 'Wende/TagNacht'}:</strong> ${exactSeason.name} <span class="opacity-60 text-xs">${t('timeOclock') ? 'um ' : 'at '}${exactSeason.time}</span></p>`;
     }
     
     // Check for public/religious holidays using date-holidays library
@@ -963,7 +1050,7 @@ function showModal(dayIndex, isSpecialDay, gregorianDate, dateStr, mmdd) {
         });
     } else {
         const li = document.createElement('li');
-        li.textContent = 'Keine Ereignisse.';
+        li.textContent = t('modalNoEvents');
         li.className = 'text-[color-mix(in_srgb,var(--theme-gold)_50%,transparent)] italic';
         eventsUl.appendChild(li);
     }
