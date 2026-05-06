@@ -14,6 +14,7 @@ module.exports = {
     clean: true,
     publicPath: '',
   },
+  devtool: 'source-map',
   devServer: {
     static: './docs',
     port: 8080,

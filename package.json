@@ -7,8 +7,8 @@
     "start": "webpack serve",
     "build": "webpack --mode production"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["calendar", "sun", "moon", "astronomy"],
+  "author": "Joerg Roth",
   "license": "ISC",
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
