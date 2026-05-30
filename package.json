@@ -7,7 +7,12 @@
     "start": "webpack serve",
     "build": "webpack --mode production"
   },
-  "keywords": ["calendar", "sun", "moon", "astronomy"],
+  "keywords": [
+    "calendar",
+    "sun",
+    "moon",
+    "astronomy"
+  ],
   "author": "Joerg Roth",
   "license": "ISC",
   "devDependencies": {

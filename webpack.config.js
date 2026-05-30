@@ -14,6 +14,7 @@ module.exports = {
     clean: true,
     publicPath: '',
   },
+  //devtool = 'eval',
   devtool: 'source-map',
   devServer: {
     static: './docs',
